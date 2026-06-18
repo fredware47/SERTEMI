@@ -26,7 +26,13 @@
         .whatsapp-btn:hover { background-color: #128C7E; color: white; }
         .import-btn { background-color: #6f42c1; color: white; border: none; }
         .import-btn:hover { background-color: #5a32a3; color: white; }
-        .admin-only { display: none; }
+        /* Clase para ocultar pestañas de admin */
+        .admin-only {
+            display: none !important;
+        }
+        .admin-visible {
+            display: list-item !important; /* para elementos li */
+        }
     </style>
 </head>
 <body>
@@ -229,35 +235,62 @@
         }
 
         // ============================================================
-        //  CONTROL DE ACCESO
+        //  CONTROL DE ACCESO (CORREGIDO)
         // ============================================================
         const CONTRASENA = "1234";
         let modoAdmin = false;
 
         function actualizarVisibilidad() {
-            document.querySelectorAll('.admin-only').forEach(el => {
-                el.style.display = modoAdmin ? '' : 'none';
+            const adminItems = document.querySelectorAll('.admin-only');
+            adminItems.forEach(el => {
+                if (modoAdmin) {
+                    el.classList.remove('admin-only');
+                    el.classList.add('admin-visible');
+                } else {
+                    el.classList.remove('admin-visible');
+                    el.classList.add('admin-only');
+                }
             });
             document.getElementById('estadoAdmin').textContent = modoAdmin ? 'Modo técnico' : 'Modo cliente';
             document.getElementById('estadoAdmin').className = `badge ${modoAdmin ? 'bg-success' : 'bg-secondary'} ms-2`;
+            
+            // Forzar recarga de las pestañas de Bootstrap para que se active la correcta
+            if (modoAdmin) {
+                // Si estamos en modo admin, podemos activar la pestaña de técnico por defecto
+                // pero mejor no interferir con la selección del usuario.
+            }
         }
 
         document.getElementById('btnAccesoAdmin').addEventListener('click', () => {
             if (modoAdmin) {
+                // Desactivar modo admin
                 modoAdmin = false;
                 actualizarVisibilidad();
-                document.querySelector('[data-bs-target="#cliente"]').click();
+                // Volver a la pestaña cliente
+                const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
+                if (clienteTab) {
+                    const tab = new bootstrap.Tab(clienteTab);
+                    tab.show();
+                }
                 return;
             }
             const pass = prompt('Introduce la contraseña de técnico:');
             if (pass === CONTRASENA) {
                 modoAdmin = true;
                 actualizarVisibilidad();
-                alert('Acceso concedido.');
+                alert('Acceso concedido. Ahora ves todas las pestañas.');
+                // Opcional: activar la pestaña de técnico
+                const tecnicoTab = document.querySelector('[data-bs-target="#tecnico"]');
+                if (tecnicoTab) {
+                    const tab = new bootstrap.Tab(tecnicoTab);
+                    tab.show();
+                }
             } else if (pass !== null) {
                 alert('Contraseña incorrecta.');
             }
         });
+
+        // Inicializar ocultando pestañas de admin
         actualizarVisibilidad();
 
         // ============================================================
@@ -333,7 +366,6 @@
             const texto = prompt('Pega aquí el mensaje de WhatsApp que te ha enviado el cliente:');
             if (!texto) return;
 
-            // Extraer campos del mensaje (formato esperado: *Nombre:* Juan)
             const campos = {};
             const lineas = texto.split('\n');
             lineas.forEach(linea => {
@@ -345,7 +377,6 @@
                 }
             });
 
-            // Rellenar el formulario de cliente
             if (campos['nombre']) document.getElementById('nombre').value = campos['nombre'];
             if (campos['apellido']) document.getElementById('apellido').value = campos['apellido'];
             if (campos['teléfono'] || campos['telefono']) {
@@ -355,7 +386,6 @@
             if (campos['dirección']) document.getElementById('direccion').value = campos['dirección'];
             if (campos['descripción']) document.getElementById('descripcion').value = campos['descripción'];
             if (campos['fecha']) {
-                // Intentar convertir fecha a formato YYYY-MM-DD
                 const fechaParts = campos['fecha'].split('/');
                 if (fechaParts.length === 3) {
                     const fecha = `${fechaParts[2]}-${fechaParts[1].padStart(2,'0')}-${fechaParts[0].padStart(2,'0')}`;
@@ -364,7 +394,11 @@
             }
 
             // Cambiar a la pestaña cliente
-            document.querySelector('[data-bs-target="#cliente"]').click();
+            const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
+            if (clienteTab) {
+                const tab = new bootstrap.Tab(clienteTab);
+                tab.show();
+            }
             alert('Datos importados desde WhatsApp. Revisa y pulsa "Generar Parte".');
         });
 
