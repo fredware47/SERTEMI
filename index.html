@@ -9,8 +9,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     <!-- jsPDF y autoTable -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
     <style>
         body { padding-top: 20px; background-color: #f8f9fa; }
         .card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -26,13 +26,9 @@
         .whatsapp-btn:hover { background-color: #128C7E; color: white; }
         .import-btn { background-color: #6f42c1; color: white; border: none; }
         .import-btn:hover { background-color: #5a32a3; color: white; }
-        /* Clase para ocultar pestañas de admin */
-        .admin-only {
-            display: none !important;
-        }
-        .admin-visible {
-            display: list-item !important; /* para elementos li */
-        }
+        .admin-only { display: none !important; }
+        .admin-visible { display: list-item !important; }
+        .modal-textarea { min-height: 200px; }
     </style>
 </head>
 <body>
@@ -101,7 +97,8 @@
                             </div>
                             <div class="d-grid gap-2 d-md-flex">
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Generar Parte</button>
-                                <button type="button" id="btnWhatsAppCliente" class="btn whatsapp-btn"><i class="fab fa-whatsapp"></i> Enviar por WhatsApp</button>
+                                <!-- Botón solo visible en modo admin -->
+                                <button type="button" id="btnWhatsAppCliente" class="btn whatsapp-btn admin-only"><i class="fab fa-whatsapp"></i> Enviar a mi WhatsApp</button>
                             </div>
                         </form>
                         <div id="mensajeCliente" class="mt-3"></div>
@@ -119,7 +116,9 @@
                                 <div id="listaPartes"><p class="text-muted">Cargando partes...</p></div>
                                 <button id="btnDescargarPDF" class="btn btn-success mt-3"><i class="fas fa-file-pdf"></i> Descargar todos (PDF)</button>
                                 <button id="btnImprimir" class="btn btn-secondary mt-3"><i class="fas fa-print"></i> Imprimir todos</button>
-                                <button id="btnImportarWhatsApp" class="btn import-btn mt-3"><i class="fas fa-download"></i> Importar desde WhatsApp</button>
+                                <button id="btnAbrirModalImportar" class="btn import-btn mt-3" data-bs-toggle="modal" data-bs-target="#modalImportarWhatsApp">
+                                    <i class="fas fa-download"></i> Importar desde WhatsApp
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -171,6 +170,26 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Importar WhatsApp -->
+    <div class="modal fade" id="modalImportarWhatsApp" tabindex="-1" aria-labelledby="modalImportarWhatsAppLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalImportarWhatsAppLabel"><i class="fab fa-whatsapp"></i> Importar desde WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Pega aquí el mensaje de WhatsApp que te ha enviado el cliente (debe tener el formato <code>*Campo:* valor</code>).</p>
+                    <textarea class="form-control modal-textarea" id="textoWhatsApp" placeholder="Ejemplo:&#10;*Nombre:* Juan&#10;*Apellido:* Pérez&#10;*Teléfono:* 612345678&#10;*Dirección:* Calle Mayor 1&#10;*Descripción:* No enciende"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnProcesarImportacion"><i class="fas fa-file-import"></i> Importar datos</button>
                 </div>
             </div>
         </div>
@@ -235,7 +254,7 @@
         }
 
         // ============================================================
-        //  CONTROL DE ACCESO (CORREGIDO)
+        //  CONTROL DE ACCESO CON LOCALSTORAGE
         // ============================================================
         const CONTRASENA = "1234";
         let modoAdmin = false;
@@ -253,20 +272,21 @@
             });
             document.getElementById('estadoAdmin').textContent = modoAdmin ? 'Modo técnico' : 'Modo cliente';
             document.getElementById('estadoAdmin').className = `badge ${modoAdmin ? 'bg-success' : 'bg-secondary'} ms-2`;
-            
-            // Forzar recarga de las pestañas de Bootstrap para que se active la correcta
-            if (modoAdmin) {
-                // Si estamos en modo admin, podemos activar la pestaña de técnico por defecto
-                // pero mejor no interferir con la selección del usuario.
-            }
+            localStorage.setItem('modoAdmin', JSON.stringify(modoAdmin));
         }
+
+        // Restaurar sesión
+        const modoGuardado = localStorage.getItem('modoAdmin');
+        if (modoGuardado === 'true') {
+            modoAdmin = true;
+        }
+        actualizarVisibilidad();
 
         document.getElementById('btnAccesoAdmin').addEventListener('click', () => {
             if (modoAdmin) {
-                // Desactivar modo admin
                 modoAdmin = false;
                 actualizarVisibilidad();
-                // Volver a la pestaña cliente
+                localStorage.removeItem('modoAdmin');
                 const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
                 if (clienteTab) {
                     const tab = new bootstrap.Tab(clienteTab);
@@ -278,8 +298,7 @@
             if (pass === CONTRASENA) {
                 modoAdmin = true;
                 actualizarVisibilidad();
-                alert('Acceso concedido. Ahora ves todas las pestañas.');
-                // Opcional: activar la pestaña de técnico
+                alert('Acceso concedido.');
                 const tecnicoTab = document.querySelector('[data-bs-target="#tecnico"]');
                 if (tecnicoTab) {
                     const tab = new bootstrap.Tab(tecnicoTab);
@@ -289,9 +308,6 @@
                 alert('Contraseña incorrecta.');
             }
         });
-
-        // Inicializar ocultando pestañas de admin
-        actualizarVisibilidad();
 
         // ============================================================
         //  CLIENTE
@@ -330,7 +346,7 @@
             }
         });
 
-        // Botón "Enviar por WhatsApp" en Cliente
+        // Botón "Enviar a mi WhatsApp" - solo visible en modo admin
         document.getElementById('btnWhatsAppCliente').addEventListener('click', () => {
             const nombre = document.getElementById('nombre').value.trim();
             const apellido = document.getElementById('apellido').value.trim();
@@ -340,7 +356,7 @@
             const descripcion = document.getElementById('descripcion').value.trim();
 
             if (!nombre || !apellido || !telefono || !direccion) {
-                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-warning">Completa al menos los campos obligatorios (nombre, apellido, teléfono, dirección).</div>`;
+                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-warning">Completa los campos obligatorios.</div>`;
                 return;
             }
 
@@ -353,19 +369,23 @@
                 `*Descripción:* ${descripcion || 'No proporcionada'}\n` +
                 `*Fecha:* ${document.getElementById('fecha').value}`;
 
-            // Número del técnico (cambia por el tuyo)
-            const numeroTecnico = "34612345678"; // <-- REEMPLAZA CON TU NÚMERO
+            // Número del técnico (sin el +)
+            const numeroTecnico = "32648859699";
             const url = `https://wa.me/${numeroTecnico}?text=${encodeURIComponent(mensaje)}`;
             window.open(url, '_blank');
         });
 
         // ============================================================
-        //  TÉCNICO: IMPORTAR DESDE WHATSAPP
+        //  MODAL IMPORTAR WHATSAPP (NUEVO)
         // ============================================================
-        document.getElementById('btnImportarWhatsApp').addEventListener('click', () => {
-            const texto = prompt('Pega aquí el mensaje de WhatsApp que te ha enviado el cliente:');
-            if (!texto) return;
+        document.getElementById('btnProcesarImportacion').addEventListener('click', () => {
+            const texto = document.getElementById('textoWhatsApp').value;
+            if (!texto.trim()) {
+                alert('Por favor, pega el mensaje de WhatsApp.');
+                return;
+            }
 
+            // Extraer campos
             const campos = {};
             const lineas = texto.split('\n');
             lineas.forEach(linea => {
@@ -377,6 +397,7 @@
                 }
             });
 
+            // Rellenar formulario
             if (campos['nombre']) document.getElementById('nombre').value = campos['nombre'];
             if (campos['apellido']) document.getElementById('apellido').value = campos['apellido'];
             if (campos['teléfono'] || campos['telefono']) {
@@ -393,13 +414,22 @@
                 }
             }
 
+            // Cerrar el modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarWhatsApp'));
+            modal.hide();
+
             // Cambiar a la pestaña cliente
             const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
             if (clienteTab) {
                 const tab = new bootstrap.Tab(clienteTab);
                 tab.show();
             }
-            alert('Datos importados desde WhatsApp. Revisa y pulsa "Generar Parte".');
+            alert('Datos importados. Revisa y pulsa "Generar Parte".');
+        });
+
+        // Al abrir el modal, limpiar el textarea (opcional)
+        document.getElementById('btnAbrirModalImportar').addEventListener('click', () => {
+            document.getElementById('textoWhatsApp').value = '';
         });
 
         // ============================================================
