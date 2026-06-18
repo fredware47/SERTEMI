@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Partes de Reparación</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- jsPDF y autoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body { padding-top: 20px; background-color: #f8f9fa; }
+        .card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-header { background-color: #0d6efd; color: white; font-weight: bold; }
+        .nav-tabs .nav-link.active { background-color: #0d6efd; color: white; }
+        .parte-item { cursor: pointer; transition: background 0.2s; }
+        .parte-item:hover { background-color: #e9ecef; }
+        .badge-estado { font-size: 0.9rem; }
+        .proveedor-item { cursor: pointer; }
+        .proveedor-item:hover { background-color: #e9ecef; }
+        #listaPartes { max-height: 400px; overflow-y: auto; }
+        .whatsapp-btn { background-color: #25D366; color: white; border: none; }
+        .whatsapp-btn:hover { background-color: #128C7E; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4"><i class="fas fa-tools"></i> Gestión de Reparaciones</h1>
+
+        <!-- Pestañas -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="cliente-tab" data-bs-toggle="tab" data-bs-target="#cliente" type="button" role="tab">📝 Cliente</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tecnico-tab" data-bs-toggle="tab" data-bs-target="#tecnico" type="button" role="tab">🔧 Técnico</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="proveedores-tab" data-bs-toggle="tab" data-bs-target="#proveedores" type="button" role="tab">🏢 Proveedores</button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="myTabContent">
+            <!-- Cliente -->
+            <div class="tab-pane fade show active" id="cliente" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">Datos del Cliente</div>
+                    <div class="card-body">
+                        <form id="formCliente">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombre" class="form-label">Nombre *</label>
+                                    <input type="text" class="form-control" id="nombre" required />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="apellido" class="form-label">Apellido *</label>
+                                    <input type="text" class="form-control" id="apellido" required />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="telefono" class="form-label">Teléfono *</label>
+                                    <input type="tel" class="form-control" id="telefono" required />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="fecha" class="form-label">Fecha *</label>
+                                    <input type="date" class="form-control" id="fecha" required />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="direccion" class="form-label">Dirección *</label>
+                                <input type="text" class="form-control" id="direccion" required />
+                            </div>
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción del problema (opcional)</label>
+                                <textarea class="form-control" id="descripcion" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Generar Parte</button>
+                        </form>
+                        <div id="mensajeCliente" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Técnico -->
+            <div class="tab-pane fade" id="tecnico" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header">Lista de Partes</div>
+                            <div class="card-body">
+                                <div id="listaPartes"><p class="text-muted">Cargando partes...</p></div>
+                                <button id="btnDescargarPDF" class="btn btn-success mt-3"><i class="fas fa-file-pdf"></i> Descargar todos (PDF)</button>
+                                <button id="btnImprimir" class="btn btn-secondary mt-3"><i class="fas fa-print"></i> Imprimir todos</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header">Detalle del Parte</div>
+                            <div class="card-body">
+                                <div id="detalleParte"><p class="text-muted">Selecciona un parte de la lista.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proveedores -->
+            <div class="tab-pane fade" id="proveedores" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">Lista de Proveedores</div>
+                            <div class="card-body">
+                                <div id="listaProveedores"><p class="text-muted">Cargando proveedores...</p></div>
+                                <button id="btnAgregarProveedor" class="btn btn-primary mt-2"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">Detalle / Editar Proveedor</div>
+                            <div class="card-body">
+                                <form id="formProveedor">
+                                    <input type="hidden" id="proveedorId" />
+                                    <div class="mb-3">
+                                        <label for="provNombre" class="form-label">Nombre *</label>
+                                        <input type="text" class="form-control" id="provNombre" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="provTelefono" class="form-label">Teléfono *</label>
+                                        <input type="tel" class="form-control" id="provTelefono" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="provProductos" class="form-label">Productos que ofrece</label>
+                                        <input type="text" class="form-control" id="provProductos" placeholder="Ej: compresores, termostatos" />
+                                    </div>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Proveedor</button>
+                                    <button type="button" id="btnCancelarProv" class="btn btn-secondary">Cancelar</button>
+                                </form>
+                                <div id="mensajeProveedor" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase (modular) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
+                "firebase/analytics": "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // ============================================================
+        //  CONFIGURACIÓN DE FIREBASE (TUS CREDENCIALES)
+        // ============================================================
+        import { initializeApp } from 'firebase/app';
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+        import { getAnalytics } from 'firebase/analytics';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBU0VyNDoFKyK5z3zuKcm-65gEeZqg4PgQ",
+            authDomain: "sertemi-67b3c.firebaseapp.com",
+            projectId: "sertemi-67b3c",
+            storageBucket: "sertemi-67b3c.firebasestorage.app",
+            messagingSenderId: "780828941750",
+            appId: "1:780828941750:web:b699dc9b307387ea483517",
+            measurementId: "G-QQ040EL5ND"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const analytics = getAnalytics(app); // (opcional, no se usa pero se inicializa)
+
+        // ============================================================
+        //  REFERENCIAS A COLECCIONES
+        // ============================================================
+        const partesRef = collection(db, 'partes');
+        const proveedoresRef = collection(db, 'proveedores');
+
+        // ============================================================
+        //  VARIABLES GLOBALES
+        // ============================================================
+        let partes = [];
+        let proveedores = [];
+        let parteSeleccionadoId = null;
+
+        // ============================================================
+        //  AUXILIARES
+        // ============================================================
+        function formatearFecha(fecha) {
+            const d = new Date(fecha);
+            return d.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+
+        function obtenerFechaHoy() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // ============================================================
+        //  CLIENTE
+        // ============================================================
+        document.getElementById('fecha').value = obtenerFechaHoy();
+
+        document.getElementById('formCliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('nombre').value.trim();
+            const apellido = document.getElementById('apellido').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const fecha = document.getElementById('fecha').value;
+            const direccion = document.getElementById('direccion').value.trim();
+            const descripcion = document.getElementById('descripcion').value.trim();
+
+            if (!nombre || !apellido || !telefono || !fecha || !direccion) {
+                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-danger">Todos los campos obligatorios deben estar llenos.</div>`;
+                return;
+            }
+
+            try {
+                await addDoc(partesRef, {
+                    nombre, apellido, telefono, email, fecha, direccion, descripcion,
+                    concepto: '',
+                    repuestos: '',
+                    estado: 'Pendiente',
+                    createdAt: new Date().toISOString()
+                });
+                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Parte generado con éxito.</div>`;
+                document.getElementById('formCliente').reset();
+                document.getElementById('fecha').value = obtenerFechaHoy();
+                cargarPartes();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        });
+
+        // ============================================================
+        //  TÉCNICO
+        // ============================================================
+        async function cargarPartes() {
+            try {
+                const querySnapshot = await getDocs(partesRef);
+                partes = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    data.id = docSnap.id;
+                    partes.push(data);
+                });
+                renderListaPartes();
+                if (parteSeleccionadoId) {
+                    const encontrado = partes.find(p => p.id === parteSeleccionadoId);
+                    if (encontrado) mostrarDetalleParte(encontrado);
+                    else {
+                        document.getElementById('detalleParte').innerHTML = `<p class="text-muted">El parte seleccionado ya no existe.</p>`;
+                        parteSeleccionadoId = null;
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar partes:', error);
+            }
+        }
+
+        function renderListaPartes() {
+            const container = document.getElementById('listaPartes');
+            if (partes.length === 0) {
+                container.innerHTML = `<p class="text-muted">No hay partes registrados.</p>`;
+                return;
+            }
+            let html = `<ul class="list-group">`;
+            partes.forEach(p => {
+                const estadoColor = p.estado === 'Pendiente' ? 'warning' : 'success';
+                html += `
+                    <li class="list-group-item parte-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+                        <div>
+                            <strong>${p.nombre} ${p.apellido}</strong><br>
+                            <small>${formatearFecha(p.fecha)} - ${p.direccion}</small>
+                        </div>
+                        <span class="badge bg-${estadoColor} badge-estado">${p.estado}</span>
+                    </li>
+                `;
+            });
+            html += `</ul>`;
+            container.innerHTML = html;
+
+            document.querySelectorAll('.parte-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = item.dataset.id;
+                    const parte = partes.find(p => p.id === id);
+                    if (parte) {
+                        parteSeleccionadoId = id;
+                        mostrarDetalleParte(parte);
+                    }
+                });
+            });
+        }
+
+        function mostrarDetalleParte(parte) {
+            const container = document.getElementById('detalleParte');
+            const estadoColor = parte.estado === 'Pendiente' ? 'warning' : 'success';
+            container.innerHTML = `
+                <h5>Parte: ${parte.nombre} ${parte.apellido}</h5>
+                <p><strong>Fecha:</strong> ${formatearFecha(parte.fecha)}</p>
+                <p><strong>Dirección:</strong> ${parte.direccion}</p>
+                <p><strong>Teléfono:</strong> ${parte.telefono}</p>
+                <p><strong>Email:</strong> ${parte.email || 'No especificado'}</p>
+                <p><strong>Descripción inicial:</strong> ${parte.descripcion || 'No proporcionada'}</p>
+                <p><strong>Estado:</strong> <span class="badge bg-${estadoColor}">${parte.estado}</span></p>
+                <hr />
+                <form id="formTecnico">
+                    <div class="mb-3">
+                        <label for="concepto" class="form-label">Concepto de la reparación</label>
+                        <textarea class="form-control" id="concepto" rows="2">${parte.concepto || ''}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repuestos" class="form-label">Repuestos necesarios (separados por comas)</label>
+                        <input type="text" class="form-control" id="repuestos" value="${parte.repuestos || ''}" placeholder="Ej: compresor, termostato, cable" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="estadoSelect" class="form-label">Cambiar estado</label>
+                        <select class="form-select" id="estadoSelect">
+                            <option value="Pendiente" ${parte.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="En curso" ${parte.estado === 'En curso' ? 'selected' : ''}>En curso</option>
+                            <option value="Finalizado" ${parte.estado === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Actualizar parte</button>
+                    <button type="button" id="btnWhatsApp" class="btn whatsapp-btn"><i class="fab fa-whatsapp"></i> WhatsApp a proveedor</button>
+                    <button type="button" id="btnEliminarParte" class="btn btn-danger"><i class="fas fa-trash"></i> Eliminar</button>
+                </form>
+                <div id="mensajeTecnico" class="mt-3"></div>
+            `;
+
+            document.getElementById('formTecnico').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const concepto = document.getElementById('concepto').value.trim();
+                const repuestos = document.getElementById('repuestos').value.trim();
+                const estado = document.getElementById('estadoSelect').value;
+                try {
+                    const docRef = doc(db, 'partes', parte.id);
+                    await updateDoc(docRef, { concepto, repuestos, estado });
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-success">Parte actualizado.</div>`;
+                    cargarPartes();
+                } catch (error) {
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            });
+
+            document.getElementById('btnWhatsApp').addEventListener('click', () => {
+                const repuestosList = document.getElementById('repuestos').value.trim();
+                if (!repuestosList) {
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-warning">No hay repuestos para solicitar.</div>`;
+                    return;
+                }
+                if (proveedores.length === 0) {
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-warning">No hay proveedores. Ve a la pestaña Proveedores.</div>`;
+                    return;
+                }
+                const opciones = proveedores.map((p, i) => `${i+1}. ${p.nombre} - ${p.telefono}`).join('\n');
+                const eleccion = prompt(`Selecciona un proveedor (número):\n${opciones}`);
+                if (!eleccion) return;
+                const idx = parseInt(eleccion) - 1;
+                if (isNaN(idx) || idx < 0 || idx >= proveedores.length) {
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Selección inválida.</div>`;
+                    return;
+                }
+                const proveedor = proveedores[idx];
+                const mensaje = `Hola ${proveedor.nombre}, necesito los siguientes repuestos: ${repuestosList}. ¿Puedes cotizarme? Gracias.`;
+                const url = `https://wa.me/${proveedor.telefono}?text=${encodeURIComponent(mensaje)}`;
+                window.open(url, '_blank');
+            });
+
+            document.getElementById('btnEliminarParte').addEventListener('click', async () => {
+                if (!confirm('¿Eliminar este parte?')) return;
+                try {
+                    await deleteDoc(doc(db, 'partes', parte.id));
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-success">Parte eliminado.</div>`;
+                    parteSeleccionadoId = null;
+                    cargarPartes();
+                } catch (error) {
+                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            });
+        }
+
+        // ============================================================
+        //  PROVEEDORES
+        // ============================================================
+        async function cargarProveedores() {
+            try {
+                const querySnapshot = await getDocs(proveedoresRef);
+                proveedores = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    data.id = docSnap.id;
+                    proveedores.push(data);
+                });
+                renderListaProveedores();
+            } catch (error) {
+                console.error('Error al cargar proveedores:', error);
+            }
+        }
+
+        function renderListaProveedores() {
+            const container = document.getElementById('listaProveedores');
+            if (proveedores.length === 0) {
+                container.innerHTML = `<p class="text-muted">No hay proveedores registrados.</p>`;
+                return;
+            }
+            let html = `<ul class="list-group">`;
+            proveedores.forEach(p => {
+                html += `
+                    <li class="list-group-item proveedor-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+                        <div>
+                            <strong>${p.nombre}</strong><br>
+                            <small>${p.telefono} - ${p.productos || ''}</small>
+                        </div>
+                        <span><i class="fas fa-edit"></i></span>
+                    </li>
+                `;
+            });
+            html += `</ul>`;
+            container.innerHTML = html;
+
+            document.querySelectorAll('.proveedor-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = item.dataset.id;
+                    const prov = proveedores.find(p => p.id === id);
+                    if (prov) {
+                        document.getElementById('proveedorId').value = prov.id;
+                        document.getElementById('provNombre').value = prov.nombre;
+                        document.getElementById('provTelefono').value = prov.telefono;
+                        document.getElementById('provProductos').value = prov.productos || '';
+                    }
+                });
+            });
+        }
+
+        document.getElementById('formProveedor').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('proveedorId').value;
+            const nombre = document.getElementById('provNombre').value.trim();
+            const telefono = document.getElementById('provTelefono').value.trim();
+            const productos = document.getElementById('provProductos').value.trim();
+
+            if (!nombre || !telefono) {
+                document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-danger">Nombre y teléfono son obligatorios.</div>`;
+                return;
+            }
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'proveedores', id), { nombre, telefono, productos });
+                    document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-success">Proveedor actualizado.</div>`;
+                } else {
+                    await addDoc(proveedoresRef, { nombre, telefono, productos });
+                    document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-success">Proveedor agregado.</div>`;
+                }
+                document.getElementById('formProveedor').reset();
+                document.getElementById('proveedorId').value = '';
+                cargarProveedores();
+            } catch (error) {
+                document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        });
+
+        document.getElementById('btnCancelarProv').addEventListener('click', () => {
+            document.getElementById('formProveedor').reset();
+            document.getElementById('proveedorId').value = '';
+            document.getElementById('mensajeProveedor').innerHTML = '';
+        });
+
+        document.getElementById('btnAgregarProveedor').addEventListener('click', () => {
+            document.getElementById('formProveedor').reset();
+            document.getElementById('proveedorId').value = '';
+            document.getElementById('mensajeProveedor').innerHTML = '';
+            document.getElementById('provNombre').focus();
+        });
+
+        // ============================================================
+        //  PDF E IMPRESIÓN
+        // ============================================================
+        document.getElementById('btnDescargarPDF').addEventListener('click', () => {
+            if (partes.length === 0) {
+                alert('No hay partes para descargar.');
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+            doc.setFontSize(18);
+            doc.text('Listado de Partes de Reparación', 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 30);
+
+            const tableRows = partes.map(p => [
+                p.nombre + ' ' + p.apellido,
+                formatearFecha(p.fecha),
+                p.direccion,
+                p.telefono,
+                p.concepto || '-',
+                p.repuestos || '-',
+                p.estado
+            ]);
+
+            doc.autoTable({
+                head: [['Cliente', 'Fecha', 'Dirección', 'Teléfono', 'Concepto', 'Repuestos', 'Estado']],
+                body: tableRows,
+                startY: 35,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [13, 110, 253] }
+            });
+
+            doc.save(`partes_${new Date().toISOString().slice(0,10)}.pdf`);
+        });
+
+        document.getElementById('btnImprimir').addEventListener('click', () => {
+            if (partes.length === 0) {
+                alert('No hay partes para imprimir.');
+                return;
+            }
+            const win = window.open('', '_blank');
+            let html = `
+                <html><head><title>Partes de Reparación</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+                    th { background-color: #0d6efd; color: white; }
+                    .estado-pendiente { background-color: #ffc107; }
+                    .estado-finalizado { background-color: #198754; color: white; }
+                </style>
+                </head><body>
+                <h1>Listado de Partes</h1>
+                <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                <table>
+                    <thead><tr><th>Cliente</th><th>Fecha</th><th>Dirección</th><th>Teléfono</th><th>Concepto</th><th>Repuestos</th><th>Estado</th></tr></thead>
+                    <tbody>
+            `;
+            partes.forEach(p => {
+                const estadoClass = p.estado === 'Pendiente' ? 'estado-pendiente' : 'estado-finalizado';
+                html += `
+                    <tr>
+                        <td>${p.nombre} ${p.apellido}</td>
+                        <td>${formatearFecha(p.fecha)}</td>
+                        <td>${p.direccion}</td>
+                        <td>${p.telefono}</td>
+                        <td>${p.concepto || '-'}</td>
+                        <td>${p.repuestos || '-'}</td>
+                        <td class="${estadoClass}">${p.estado}</td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table></body></html>`;
+            win.document.write(html);
+            win.document.close();
+            win.print();
+        });
+
+        // ============================================================
+        //  CARGA INICIAL
+        // ============================================================
+        cargarPartes();
+        cargarProveedores();
+
+        console.log('🚀 Aplicación iniciada con Firebase');
+    </script>
+
+    <!-- Bootstrap JS (necesario para las pestañas) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
