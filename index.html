@@ -1,769 +1,1181 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestión de Partes de Reparación</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-    <!-- jsPDF y autoTable -->
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        body { padding-top: 20px; background-color: #f8f9fa; }
-        .card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .card-header { background-color: #0d6efd; color: white; font-weight: bold; }
-        .nav-tabs .nav-link.active { background-color: #0d6efd; color: white; }
-        .parte-item { cursor: pointer; transition: background 0.2s; }
-        .parte-item:hover { background-color: #e9ecef; }
-        .badge-estado { font-size: 0.9rem; }
-        .proveedor-item { cursor: pointer; }
-        .proveedor-item:hover { background-color: #e9ecef; }
-        #listaPartes { max-height: 400px; overflow-y: auto; }
-        .whatsapp-btn { background-color: #25D366; color: white; border: none; }
-        .whatsapp-btn:hover { background-color: #128C7E; color: white; }
-        .import-btn { background-color: #6f42c1; color: white; border: none; }
-        .import-btn:hover { background-color: #5a32a3; color: white; }
-        .admin-only { display: none !important; }
-        .admin-visible { display: list-item !important; }
-        .modal-textarea { min-height: 200px; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sertemi · Gestión de Partes</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<style>
+  body { padding-top: 20px; background-color: #f8f9fa; }
+  .card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+  .card-header { background-color: #1e3a8a; color: #fff; font-weight: bold; }
+  .nav-tabs .nav-link.active { background-color: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+  .nav-tabs .nav-link { color: #1e3a8a; }
+  .solicitud-item, .parte-item, .proveedor-item { cursor: pointer; transition: background .15s; }
+  .solicitud-item:hover, .parte-item:hover, .proveedor-item:hover { background-color: #eef2ff; }
+  .badge-estado { font-size: .8rem; }
+  .whatsapp-btn { background-color: #25D366; color: #fff; border: none; }
+  .whatsapp-btn:hover { background-color: #128C7E; color: #fff; }
+  #listaPartes, #listaSolicitudes { max-height: 480px; overflow-y: auto; }
+  .modal-textarea { min-height: 180px; font-family: monospace; }
+  #vistaTecnico { display: none; }
+  #vistaTecnico.activa { display: block; }
+  .material-row input { font-size: .9rem; }
+  .material-row input.cant, .material-row input.precio { text-align: right; }
+  .totales-box { background: #eef2ff; border-radius: 8px; padding: 12px; }
+  .totales-box .total-final { font-size: 1.3rem; font-weight: bold; color: #1e3a8a; }
+  .linea-vacia td { height: 28px; }
+  .loading { text-align: center; padding: 20px; color: #888; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center mb-4"><i class="fas fa-tools"></i> Gestión de Reparaciones</h1>
 
-        <!-- Botón de acceso técnico -->
-        <div class="text-center mb-3">
-            <button id="btnAccesoAdmin" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-lock"></i> Acceso técnico
-            </button>
-            <span id="estadoAdmin" class="badge bg-secondary ms-2">Modo cliente</span>
-        </div>
+<div class="container">
 
-        <!-- Pestañas -->
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="cliente-tab" data-bs-toggle="tab" data-bs-target="#cliente" type="button" role="tab">📝 Cliente</button>
-            </li>
-            <li class="nav-item admin-only" role="presentation">
-                <button class="nav-link" id="tecnico-tab" data-bs-toggle="tab" data-bs-target="#tecnico" type="button" role="tab">🔧 Técnico</button>
-            </li>
-            <li class="nav-item admin-only" role="presentation">
-                <button class="nav-link" id="proveedores-tab" data-bs-toggle="tab" data-bs-target="#proveedores" type="button" role="tab">🏢 Proveedores</button>
-            </li>
-        </ul>
-
-        <div class="tab-content mt-3" id="myTabContent">
-            <!-- Cliente -->
-            <div class="tab-pane fade show active" id="cliente" role="tabpanel">
-                <div class="card">
-                    <div class="card-header">Datos del Cliente</div>
-                    <div class="card-body">
-                        <form id="formCliente">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="nombre" class="form-label">Nombre *</label>
-                                    <input type="text" class="form-control" id="nombre" required />
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="apellido" class="form-label">Apellido *</label>
-                                    <input type="text" class="form-control" id="apellido" required />
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="telefono" class="form-label">Teléfono *</label>
-                                    <input type="tel" class="form-control" id="telefono" required />
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="email" />
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="fecha" class="form-label">Fecha *</label>
-                                    <input type="date" class="form-control" id="fecha" required />
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="direccion" class="form-label">Dirección *</label>
-                                <input type="text" class="form-control" id="direccion" required />
-                            </div>
-                            <div class="mb-3">
-                                <label for="descripcion" class="form-label">Descripción del problema (opcional)</label>
-                                <textarea class="form-control" id="descripcion" rows="2"></textarea>
-                            </div>
-                            <div class="d-grid gap-2 d-md-flex">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Generar Parte</button>
-                                <!-- Botón solo visible en modo admin -->
-                                <button type="button" id="btnWhatsAppCliente" class="btn whatsapp-btn admin-only"><i class="fab fa-whatsapp"></i> Enviar a mi WhatsApp</button>
-                            </div>
-                        </form>
-                        <div id="mensajeCliente" class="mt-3"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Técnico -->
-            <div class="tab-pane fade" id="tecnico" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-5">
-                        <div class="card">
-                            <div class="card-header">Lista de Partes</div>
-                            <div class="card-body">
-                                <div id="listaPartes"><p class="text-muted">Cargando partes...</p></div>
-                                <button id="btnDescargarPDF" class="btn btn-success mt-3"><i class="fas fa-file-pdf"></i> Descargar todos (PDF)</button>
-                                <button id="btnImprimir" class="btn btn-secondary mt-3"><i class="fas fa-print"></i> Imprimir todos</button>
-                                <button id="btnAbrirModalImportar" class="btn import-btn mt-3" data-bs-toggle="modal" data-bs-target="#modalImportarWhatsApp">
-                                    <i class="fas fa-download"></i> Importar desde WhatsApp
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card">
-                            <div class="card-header">Detalle del Parte</div>
-                            <div class="card-body">
-                                <div id="detalleParte"><p class="text-muted">Selecciona un parte de la lista.</p></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Proveedores -->
-            <div class="tab-pane fade" id="proveedores" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">Lista de Proveedores</div>
-                            <div class="card-body">
-                                <div id="listaProveedores"><p class="text-muted">Cargando proveedores...</p></div>
-                                <button id="btnAgregarProveedor" class="btn btn-primary mt-2"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">Detalle / Editar Proveedor</div>
-                            <div class="card-body">
-                                <form id="formProveedor">
-                                    <input type="hidden" id="proveedorId" />
-                                    <div class="mb-3">
-                                        <label for="provNombre" class="form-label">Nombre *</label>
-                                        <input type="text" class="form-control" id="provNombre" required />
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="provTelefono" class="form-label">Teléfono *</label>
-                                        <input type="tel" class="form-control" id="provTelefono" required />
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="provProductos" class="form-label">Productos que ofrece</label>
-                                        <input type="text" class="form-control" id="provProductos" placeholder="Ej: compresores, termostatos" />
-                                    </div>
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Proveedor</button>
-                                    <button type="button" id="btnCancelarProv" class="btn btn-secondary">Cancelar</button>
-                                </form>
-                                <div id="mensajeProveedor" class="mt-3"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- CABECERA -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="fas fa-tools text-primary"></i> Sertemi · Partes</h1>
+    <div>
+      <span id="estadoSesion" class="badge bg-secondary me-2">Sin sesión</span>
+      <button id="btnAuth" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-lock"></i> Acceso técnico
+      </button>
     </div>
+  </div>
 
-    <!-- Modal Importar WhatsApp -->
-    <div class="modal fade" id="modalImportarWhatsApp" tabindex="-1" aria-labelledby="modalImportarWhatsAppLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalImportarWhatsAppLabel"><i class="fab fa-whatsapp"></i> Importar desde WhatsApp</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  <!-- ============================ -->
+  <!-- VISTA PÚBLICA (CLIENTE)      -->
+  <!-- ============================ -->
+  <div id="vistaCliente">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-clipboard-list"></i> Solicitud de reparación
+          </div>
+          <div class="card-body">
+            <p class="text-muted small mb-3">
+              Rellena tus datos y describe el problema. El técnico recibirá tu solicitud y se pondrá en contacto contigo.
+            </p>
+            <form id="formSolicitud">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nombre *</label>
+                  <input type="text" class="form-control" id="solNombre" required>
                 </div>
-                <div class="modal-body">
-                    <p>Pega aquí el mensaje de WhatsApp que te ha enviado el cliente (debe tener el formato <code>*Campo:* valor</code>).</p>
-                    <textarea class="form-control modal-textarea" id="textoWhatsApp" placeholder="Ejemplo:&#10;*Nombre:* Juan&#10;*Apellido:* Pérez&#10;*Teléfono:* 612345678&#10;*Dirección:* Calle Mayor 1&#10;*Descripción:* No enciende"></textarea>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Apellido</label>
+                  <input type="text" class="form-control" id="solApellido">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnProcesarImportacion"><i class="fas fa-file-import"></i> Importar datos</button>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Teléfono *</label>
+                  <input type="tel" class="form-control" id="solTelefono" required>
                 </div>
-            </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" id="solEmail">
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label class="form-label">Dirección *</label>
+                  <input type="text" class="form-control" id="solDireccion" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Población</label>
+                  <input type="text" class="form-control" id="solPoblacion">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Aparato (marca y modelo si lo sabes)</label>
+                <input type="text" class="form-control" id="solAparato" placeholder="Ej: Caldera Vaillant ecoTEC">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">¿Qué problema tiene? *</label>
+                <textarea class="form-control" id="solDescripcion" rows="3" required placeholder="Ej: Hace un ruido raro y no calienta el agua"></textarea>
+              </div>
+              <div class="d-grid gap-2 d-md-flex">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Enviar solicitud</button>
+                <button type="button" class="btn whatsapp-btn" data-bs-toggle="modal" data-bs-target="#modalImportarWhatsApp">
+                  <i class="fab fa-whatsapp"></i> Importar de WhatsApp
+                </button>
+              </div>
+            </form>
+            <div id="msgSolicitud" class="mt-3"></div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Firebase (modular) -->
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
-                "firebase/analytics": "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js"
-            }
-        }
-    </script>
+  <!-- ============================ -->
+  <!-- VISTA TÉCNICO (AUTH)         -->
+  <!-- ============================ -->
+  <div id="vistaTecnico">
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSolicitudes" type="button">
+          📥 Solicitudes <span id="badgeSolicitudes" class="badge bg-danger ms-1">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPartes" type="button">📝 Partes</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProveedores" type="button">🏢 Proveedores</button>
+      </li>
+    </ul>
 
-    <script type="module">
-        // ============================================================
-        //  CONFIGURACIÓN DE FIREBASE
-        // ============================================================
-        import { initializeApp } from 'firebase/app';
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-        import { getAnalytics } from 'firebase/analytics';
+    <div class="tab-content">
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBU0VyNDoFKyK5z3zuKcm-65gEeZqg4PgQ",
-            authDomain: "sertemi-67b3c.firebaseapp.com",
-            projectId: "sertemi-67b3c",
-            storageBucket: "sertemi-67b3c.firebasestorage.app",
-            messagingSenderId: "780828941750",
-            appId: "1:780828941750:web:b699dc9b307387ea483517",
-            measurementId: "G-QQ040EL5ND"
-        };
+      <!-- TAB SOLICITUDES -->
+      <div class="tab-pane fade show active" id="tabSolicitudes">
+        <div class="row">
+          <div class="col-md-5">
+            <div class="card">
+              <div class="card-header">Solicitudes pendientes</div>
+              <div class="card-body">
+                <div id="listaSolicitudes"><div class="loading">Cargando…</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card">
+              <div class="card-header">Detalle de la solicitud</div>
+              <div class="card-body">
+                <div id="detalleSolicitud"><p class="text-muted">Selecciona una solicitud.</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const analytics = getAnalytics(app);
+      <!-- TAB PARTES -->
+      <div class="tab-pane fade" id="tabPartes">
+        <div class="row">
+          <div class="col-md-5">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Partes de trabajo</span>
+                <button id="btnNuevoParte" class="btn btn-sm btn-light"><i class="fas fa-plus"></i> Nuevo</button>
+              </div>
+              <div class="card-body">
+                <div id="listaPartes"><div class="loading">Cargando…</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Editar parte</span>
+                <div>
+                  <button id="btnImprimirParte" class="btn btn-sm btn-outline-light" disabled>
+                    <i class="fas fa-print"></i> Imprimir
+                  </button>
+                  <button id="btnEliminarParte" class="btn btn-sm btn-outline-light" disabled>
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="detalleParte"><p class="text-muted">Selecciona un parte o crea uno nuevo.</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        // ============================================================
-        //  REFERENCIAS A COLECCIONES
-        // ============================================================
-        const partesRef = collection(db, 'partes');
-        const proveedoresRef = collection(db, 'proveedores');
-
-        // ============================================================
-        //  VARIABLES GLOBALES
-        // ============================================================
-        let partes = [];
-        let proveedores = [];
-        let parteSeleccionadoId = null;
-
-        // ============================================================
-        //  AUXILIARES
-        // ============================================================
-        function formatearFecha(fecha) {
-            const d = new Date(fecha);
-            return d.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
-        }
-
-        function obtenerFechaHoy() {
-            return new Date().toISOString().split('T')[0];
-        }
-
-        // ============================================================
-        //  CONTROL DE ACCESO CON LOCALSTORAGE
-        // ============================================================
-        const CONTRASENA = "1234";
-        let modoAdmin = false;
-
-        function actualizarVisibilidad() {
-            const adminItems = document.querySelectorAll('.admin-only');
-            adminItems.forEach(el => {
-                if (modoAdmin) {
-                    el.classList.remove('admin-only');
-                    el.classList.add('admin-visible');
-                } else {
-                    el.classList.remove('admin-visible');
-                    el.classList.add('admin-only');
-                }
-            });
-            document.getElementById('estadoAdmin').textContent = modoAdmin ? 'Modo técnico' : 'Modo cliente';
-            document.getElementById('estadoAdmin').className = `badge ${modoAdmin ? 'bg-success' : 'bg-secondary'} ms-2`;
-            localStorage.setItem('modoAdmin', JSON.stringify(modoAdmin));
-        }
-
-        // Restaurar sesión
-        const modoGuardado = localStorage.getItem('modoAdmin');
-        if (modoGuardado === 'true') {
-            modoAdmin = true;
-        }
-        actualizarVisibilidad();
-
-        document.getElementById('btnAccesoAdmin').addEventListener('click', () => {
-            if (modoAdmin) {
-                modoAdmin = false;
-                actualizarVisibilidad();
-                localStorage.removeItem('modoAdmin');
-                const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
-                if (clienteTab) {
-                    const tab = new bootstrap.Tab(clienteTab);
-                    tab.show();
-                }
-                return;
-            }
-            const pass = prompt('Introduce la contraseña de técnico:');
-            if (pass === CONTRASENA) {
-                modoAdmin = true;
-                actualizarVisibilidad();
-                alert('Acceso concedido.');
-                const tecnicoTab = document.querySelector('[data-bs-target="#tecnico"]');
-                if (tecnicoTab) {
-                    const tab = new bootstrap.Tab(tecnicoTab);
-                    tab.show();
-                }
-            } else if (pass !== null) {
-                alert('Contraseña incorrecta.');
-            }
-        });
-
-        // ============================================================
-        //  CLIENTE
-        // ============================================================
-        document.getElementById('fecha').value = obtenerFechaHoy();
-
-        document.getElementById('formCliente').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('nombre').value.trim();
-            const apellido = document.getElementById('apellido').value.trim();
-            const telefono = document.getElementById('telefono').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const fecha = document.getElementById('fecha').value;
-            const direccion = document.getElementById('direccion').value.trim();
-            const descripcion = document.getElementById('descripcion').value.trim();
-
-            if (!nombre || !apellido || !telefono || !fecha || !direccion) {
-                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-danger">Todos los campos obligatorios deben estar llenos.</div>`;
-                return;
-            }
-
-            try {
-                await addDoc(partesRef, {
-                    nombre, apellido, telefono, email, fecha, direccion, descripcion,
-                    concepto: '',
-                    repuestos: '',
-                    estado: 'Pendiente',
-                    createdAt: new Date().toISOString()
-                });
-                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Parte generado con éxito.</div>`;
-                document.getElementById('formCliente').reset();
-                document.getElementById('fecha').value = obtenerFechaHoy();
-                cargarPartes();
-            } catch (error) {
-                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            }
-        });
-
-        // Botón "Enviar a mi WhatsApp" - solo visible en modo admin
-        document.getElementById('btnWhatsAppCliente').addEventListener('click', () => {
-            const nombre = document.getElementById('nombre').value.trim();
-            const apellido = document.getElementById('apellido').value.trim();
-            const telefono = document.getElementById('telefono').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const direccion = document.getElementById('direccion').value.trim();
-            const descripcion = document.getElementById('descripcion').value.trim();
-
-            if (!nombre || !apellido || !telefono || !direccion) {
-                document.getElementById('mensajeCliente').innerHTML = `<div class="alert alert-warning">Completa los campos obligatorios.</div>`;
-                return;
-            }
-
-            const mensaje = `*Nuevo parte de reparación*\n\n` +
-                `*Nombre:* ${nombre}\n` +
-                `*Apellido:* ${apellido}\n` +
-                `*Teléfono:* ${telefono}\n` +
-                `*Email:* ${email || 'No especificado'}\n` +
-                `*Dirección:* ${direccion}\n` +
-                `*Descripción:* ${descripcion || 'No proporcionada'}\n` +
-                `*Fecha:* ${document.getElementById('fecha').value}`;
-
-            // Número del técnico (sin el +)
-            const numeroTecnico = "32648859699";
-            const url = `https://wa.me/${numeroTecnico}?text=${encodeURIComponent(mensaje)}`;
-            window.open(url, '_blank');
-        });
-
-        // ============================================================
-        //  MODAL IMPORTAR WHATSAPP (NUEVO)
-        // ============================================================
-        document.getElementById('btnProcesarImportacion').addEventListener('click', () => {
-            const texto = document.getElementById('textoWhatsApp').value;
-            if (!texto.trim()) {
-                alert('Por favor, pega el mensaje de WhatsApp.');
-                return;
-            }
-
-            // Extraer campos
-            const campos = {};
-            const lineas = texto.split('\n');
-            lineas.forEach(linea => {
-                const match = linea.match(/^\*([^*]+)\*:\s*(.*)$/);
-                if (match) {
-                    const clave = match[1].trim().toLowerCase();
-                    const valor = match[2].trim();
-                    campos[clave] = valor;
-                }
-            });
-
-            // Rellenar formulario
-            if (campos['nombre']) document.getElementById('nombre').value = campos['nombre'];
-            if (campos['apellido']) document.getElementById('apellido').value = campos['apellido'];
-            if (campos['teléfono'] || campos['telefono']) {
-                document.getElementById('telefono').value = campos['teléfono'] || campos['telefono'];
-            }
-            if (campos['email']) document.getElementById('email').value = campos['email'];
-            if (campos['dirección']) document.getElementById('direccion').value = campos['dirección'];
-            if (campos['descripción']) document.getElementById('descripcion').value = campos['descripción'];
-            if (campos['fecha']) {
-                const fechaParts = campos['fecha'].split('/');
-                if (fechaParts.length === 3) {
-                    const fecha = `${fechaParts[2]}-${fechaParts[1].padStart(2,'0')}-${fechaParts[0].padStart(2,'0')}`;
-                    document.getElementById('fecha').value = fecha;
-                }
-            }
-
-            // Cerrar el modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarWhatsApp'));
-            modal.hide();
-
-            // Cambiar a la pestaña cliente
-            const clienteTab = document.querySelector('[data-bs-target="#cliente"]');
-            if (clienteTab) {
-                const tab = new bootstrap.Tab(clienteTab);
-                tab.show();
-            }
-            alert('Datos importados. Revisa y pulsa "Generar Parte".');
-        });
-
-        // Al abrir el modal, limpiar el textarea (opcional)
-        document.getElementById('btnAbrirModalImportar').addEventListener('click', () => {
-            document.getElementById('textoWhatsApp').value = '';
-        });
-
-        // ============================================================
-        //  TÉCNICO: GESTIÓN DE PARTES
-        // ============================================================
-        async function cargarPartes() {
-            try {
-                const querySnapshot = await getDocs(partesRef);
-                partes = [];
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    data.id = docSnap.id;
-                    partes.push(data);
-                });
-                renderListaPartes();
-                if (parteSeleccionadoId) {
-                    const encontrado = partes.find(p => p.id === parteSeleccionadoId);
-                    if (encontrado) mostrarDetalleParte(encontrado);
-                    else {
-                        document.getElementById('detalleParte').innerHTML = `<p class="text-muted">El parte seleccionado ya no existe.</p>`;
-                        parteSeleccionadoId = null;
-                    }
-                }
-            } catch (error) {
-                console.error('Error al cargar partes:', error);
-            }
-        }
-
-        function renderListaPartes() {
-            const container = document.getElementById('listaPartes');
-            if (partes.length === 0) {
-                container.innerHTML = `<p class="text-muted">No hay partes registrados.</p>`;
-                return;
-            }
-            let html = `<ul class="list-group">`;
-            partes.forEach(p => {
-                const estadoColor = p.estado === 'Pendiente' ? 'warning' : 'success';
-                html += `
-                    <li class="list-group-item parte-item d-flex justify-content-between align-items-center" data-id="${p.id}">
-                        <div>
-                            <strong>${p.nombre} ${p.apellido}</strong><br>
-                            <small>${formatearFecha(p.fecha)} - ${p.direccion}</small>
-                        </div>
-                        <span class="badge bg-${estadoColor} badge-estado">${p.estado}</span>
-                    </li>
-                `;
-            });
-            html += `</ul>`;
-            container.innerHTML = html;
-
-            document.querySelectorAll('.parte-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const id = item.dataset.id;
-                    const parte = partes.find(p => p.id === id);
-                    if (parte) {
-                        parteSeleccionadoId = id;
-                        mostrarDetalleParte(parte);
-                    }
-                });
-            });
-        }
-
-        function mostrarDetalleParte(parte) {
-            const container = document.getElementById('detalleParte');
-            const estadoColor = parte.estado === 'Pendiente' ? 'warning' : 'success';
-            container.innerHTML = `
-                <h5>Parte: ${parte.nombre} ${parte.apellido}</h5>
-                <p><strong>Fecha:</strong> ${formatearFecha(parte.fecha)}</p>
-                <p><strong>Dirección:</strong> ${parte.direccion}</p>
-                <p><strong>Teléfono:</strong> ${parte.telefono}</p>
-                <p><strong>Email:</strong> ${parte.email || 'No especificado'}</p>
-                <p><strong>Descripción inicial:</strong> ${parte.descripcion || 'No proporcionada'}</p>
-                <p><strong>Estado:</strong> <span class="badge bg-${estadoColor}">${parte.estado}</span></p>
-                <hr />
-                <form id="formTecnico">
-                    <div class="mb-3">
-                        <label for="concepto" class="form-label">Concepto de la reparación</label>
-                        <textarea class="form-control" id="concepto" rows="2">${parte.concepto || ''}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="repuestos" class="form-label">Repuestos necesarios (separados por comas)</label>
-                        <input type="text" class="form-control" id="repuestos" value="${parte.repuestos || ''}" placeholder="Ej: compresor, termostato, cable" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="estadoSelect" class="form-label">Cambiar estado</label>
-                        <select class="form-select" id="estadoSelect">
-                            <option value="Pendiente" ${parte.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                            <option value="En curso" ${parte.estado === 'En curso' ? 'selected' : ''}>En curso</option>
-                            <option value="Finalizado" ${parte.estado === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Actualizar parte</button>
-                    <button type="button" id="btnWhatsApp" class="btn whatsapp-btn"><i class="fab fa-whatsapp"></i> WhatsApp a proveedor</button>
-                    <button type="button" id="btnEliminarParte" class="btn btn-danger"><i class="fas fa-trash"></i> Eliminar</button>
+      <!-- TAB PROVEEDORES -->
+      <div class="tab-pane fade" id="tabProveedores">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Proveedores</span>
+                <button id="btnNuevoProveedor" class="btn btn-sm btn-light"><i class="fas fa-plus"></i> Nuevo</button>
+              </div>
+              <div class="card-body">
+                <div id="listaProveedores"><div class="loading">Cargando…</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">Editar proveedor</div>
+              <div class="card-body">
+                <form id="formProveedor">
+                  <input type="hidden" id="provId">
+                  <div class="mb-3">
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="provNombre" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Teléfono *</label>
+                    <input type="tel" class="form-control" id="provTelefono" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Productos que ofrece</label>
+                    <input type="text" class="form-control" id="provProductos">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="provEmail">
+                  </div>
+                  <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                  <button type="button" id="btnCancelarProv" class="btn btn-secondary">Cancelar</button>
                 </form>
-                <div id="mensajeTecnico" class="mt-3"></div>
-            `;
+                <div id="msgProveedor" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            document.getElementById('formTecnico').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const concepto = document.getElementById('concepto').value.trim();
-                const repuestos = document.getElementById('repuestos').value.trim();
-                const estado = document.getElementById('estadoSelect').value;
-                try {
-                    const docRef = doc(db, 'partes', parte.id);
-                    await updateDoc(docRef, { concepto, repuestos, estado });
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-success">Parte actualizado.</div>`;
-                    cargarPartes();
-                } catch (error) {
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                }
-            });
+    </div>
+  </div>
 
-            document.getElementById('btnWhatsApp').addEventListener('click', () => {
-                const repuestosList = document.getElementById('repuestos').value.trim();
-                if (!repuestosList) {
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-warning">No hay repuestos para solicitar.</div>`;
-                    return;
-                }
-                if (proveedores.length === 0) {
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-warning">No hay proveedores. Ve a la pestaña Proveedores.</div>`;
-                    return;
-                }
-                const opciones = proveedores.map((p, i) => `${i+1}. ${p.nombre} - ${p.telefono}`).join('\n');
-                const eleccion = prompt(`Selecciona un proveedor (número):\n${opciones}`);
-                if (!eleccion) return;
-                const idx = parseInt(eleccion) - 1;
-                if (isNaN(idx) || idx < 0 || idx >= proveedores.length) {
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Selección inválida.</div>`;
-                    return;
-                }
-                const proveedor = proveedores[idx];
-                const mensaje = `Hola ${proveedor.nombre}, necesito los siguientes repuestos: ${repuestosList}. ¿Puedes cotizarme? Gracias.`;
-                const url = `https://wa.me/${proveedor.telefono}?text=${encodeURIComponent(mensaje)}`;
-                window.open(url, '_blank');
-            });
+</div>
 
-            document.getElementById('btnEliminarParte').addEventListener('click', async () => {
-                if (!confirm('¿Eliminar este parte?')) return;
-                try {
-                    await deleteDoc(doc(db, 'partes', parte.id));
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-success">Parte eliminado.</div>`;
-                    parteSeleccionadoId = null;
-                    cargarPartes();
-                } catch (error) {
-                    document.getElementById('mensajeTecnico').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                }
-            });
-        }
+<!-- MODAL: LOGIN -->
+<div class="modal fade" id="modalLogin" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-lock"></i> Acceso técnico</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formLogin">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" id="loginEmail" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="loginPass" required>
+          </div>
+          <div id="loginMsg"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-        // ============================================================
-        //  PROVEEDORES
-        // ============================================================
-        async function cargarProveedores() {
-            try {
-                const querySnapshot = await getDocs(proveedoresRef);
-                proveedores = [];
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    data.id = docSnap.id;
-                    proveedores.push(data);
-                });
-                renderListaProveedores();
-            } catch (error) {
-                console.error('Error al cargar proveedores:', error);
-            }
-        }
+<!-- MODAL: IMPORTAR WHATSAPP -->
+<div class="modal fade" id="modalImportarWhatsApp" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fab fa-whatsapp"></i> Importar de WhatsApp</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted">
+          Pega el mensaje del cliente. Formato admitido: líneas tipo <code>*Campo:* valor</code>.
+          También funciona con líneas sueltas tipo <code>Nombre: Juan</code>.
+        </p>
+        <textarea class="form-control modal-textarea" id="textoWhatsApp" placeholder="Ejemplo:&#10;*Nombre:* Juan&#10;*Apellido:* Pérez&#10;*Teléfono:* 612345678&#10;*Dirección:* Calle Mayor 1&#10;*Aparato:* Caldera Vaillant&#10;*Descripción:* No enciende"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnProcesarImport"><i class="fas fa-file-import"></i> Importar datos</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        function renderListaProveedores() {
-            const container = document.getElementById('listaProveedores');
-            if (proveedores.length === 0) {
-                container.innerHTML = `<p class="text-muted">No hay proveedores registrados.</p>`;
-                return;
-            }
-            let html = `<ul class="list-group">`;
-            proveedores.forEach(p => {
-                html += `
-                    <li class="list-group-item proveedor-item d-flex justify-content-between align-items-center" data-id="${p.id}">
-                        <div>
-                            <strong>${p.nombre}</strong><br>
-                            <small>${p.telefono} - ${p.productos || ''}</small>
-                        </div>
-                        <span><i class="fas fa-edit"></i></span>
-                    </li>
-                `;
-            });
-            html += `</ul>`;
-            container.innerHTML = html;
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-            document.querySelectorAll('.proveedor-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const id = item.dataset.id;
-                    const prov = proveedores.find(p => p.id === id);
-                    if (prov) {
-                        document.getElementById('proveedorId').value = prov.id;
-                        document.getElementById('provNombre').value = prov.nombre;
-                        document.getElementById('provTelefono').value = prov.telefono;
-                        document.getElementById('provProductos').value = prov.productos || '';
-                    }
-                });
-            });
-        }
+// ============================================================
+// CONFIG
+// ============================================================
+const SUPABASE_URL  = 'https://abwcjcohomifcilquknf.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_5M0b1VwXkV9nyJDUbnmDew_YLTFIlSw';
 
-        document.getElementById('formProveedor').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('proveedorId').value;
-            const nombre = document.getElementById('provNombre').value.trim();
-            const telefono = document.getElementById('provTelefono').value.trim();
-            const productos = document.getElementById('provProductos').value.trim();
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            if (!nombre || !telefono) {
-                document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-danger">Nombre y teléfono son obligatorios.</div>`;
-                return;
-            }
+// ============================================================
+// ESTADO GLOBAL
+// ============================================================
+let session = null;
+let solicitudes = [];
+let partes = [];
+let proveedores = [];
+let solicitudSeleccionada = null;
+let parteSeleccionado = null;
+let lineasMaterial = []; // {cantidad, codigo, descripcion, precio_unitario}
 
-            try {
-                if (id) {
-                    await updateDoc(doc(db, 'proveedores', id), { nombre, telefono, productos });
-                    document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-success">Proveedor actualizado.</div>`;
-                } else {
-                    await addDoc(proveedoresRef, { nombre, telefono, productos });
-                    document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-success">Proveedor agregado.</div>`;
-                }
-                document.getElementById('formProveedor').reset();
-                document.getElementById('proveedorId').value = '';
-                cargarProveedores();
-            } catch (error) {
-                document.getElementById('mensajeProveedor').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-            }
-        });
+// ============================================================
+// HELPERS
+// ============================================================
+const $ = id => document.getElementById(id);
 
-        document.getElementById('btnCancelarProv').addEventListener('click', () => {
-            document.getElementById('formProveedor').reset();
-            document.getElementById('proveedorId').value = '';
-            document.getElementById('mensajeProveedor').innerHTML = '';
-        });
+const eur = n => (Number(n) || 0).toFixed(2).replace('.', ',') + ' €';
+const num = n => (Number(n) || 0).toFixed(2).replace('.', ',');
 
-        document.getElementById('btnAgregarProveedor').addEventListener('click', () => {
-            document.getElementById('formProveedor').reset();
-            document.getElementById('proveedorId').value = '';
-            document.getElementById('mensajeProveedor').innerHTML = '';
-            document.getElementById('provNombre').focus();
-        });
+function fmtFecha(f) {
+  if (!f) return '';
+  const d = new Date(f);
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
-        // ============================================================
-        //  PDF E IMPRESIÓN
-        // ============================================================
-        document.getElementById('btnDescargarPDF').addEventListener('click', () => {
-            if (partes.length === 0) {
-                alert('No hay partes para descargar.');
-                return;
-            }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('landscape', 'mm', 'a4');
-            doc.setFontSize(18);
-            doc.text('Listado de Partes de Reparación', 14, 22);
-            doc.setFontSize(10);
-            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 30);
+function hoyISO() { return new Date().toISOString().slice(0, 10); }
 
-            const tableRows = partes.map(p => [
-                p.nombre + ' ' + p.apellido,
-                formatearFecha(p.fecha),
-                p.direccion,
-                p.telefono,
-                p.concepto || '-',
-                p.repuestos || '-',
-                p.estado
-            ]);
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
 
-            doc.autoTable({
-                head: [['Cliente', 'Fecha', 'Dirección', 'Teléfono', 'Concepto', 'Repuestos', 'Estado']],
-                body: tableRows,
-                startY: 35,
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [13, 110, 253] }
-            });
+// ============================================================
+// AUTH
+// ============================================================
+supabase.auth.onAuthStateChange((_event, s) => {
+  session = s;
+  if (s) {
+    $('estadoSesion').textContent = s.user.email;
+    $('estadoSesion').className = 'badge bg-success me-2';
+    $('btnAuth').innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
+    $('vistaCliente').style.display = 'none';
+    $('vistaTecnico').classList.add('activa');
+    cargarTodo();
+  } else {
+    $('estadoSesion').textContent = 'Sin sesión';
+    $('estadoSesion').className = 'badge bg-secondary me-2';
+    $('btnAuth').innerHTML = '<i class="fas fa-lock"></i> Acceso técnico';
+    $('vistaCliente').style.display = 'block';
+    $('vistaTecnico').classList.remove('activa');
+    solicitudes = []; partes = []; proveedores = [];
+  }
+});
 
-            doc.save(`partes_${new Date().toISOString().slice(0,10)}.pdf`);
-        });
+// Comprobar sesión inicial
+const { data: { session: s0 } } = await supabase.auth.getSession();
+if (s0) {
+  session = s0;
+  $('estadoSesion').textContent = s0.user.email;
+  $('estadoSesion').className = 'badge bg-success me-2';
+  $('btnAuth').innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar sesión';
+  $('vistaCliente').style.display = 'none';
+  $('vistaTecnico').classList.add('activa');
+  cargarTodo();
+}
 
-        document.getElementById('btnImprimir').addEventListener('click', () => {
-            if (partes.length === 0) {
-                alert('No hay partes para imprimir.');
-                return;
-            }
-            const win = window.open('', '_blank');
-            let html = `
-                <html><head><title>Partes de Reparación</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    h1 { text-align: center; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-                    th { background-color: #0d6efd; color: white; }
-                    .estado-pendiente { background-color: #ffc107; }
-                    .estado-finalizado { background-color: #198754; color: white; }
-                </style>
-                </head><body>
-                <h1>Listado de Partes</h1>
-                <p>Fecha: ${new Date().toLocaleDateString()}</p>
-                <table>
-                    <thead><tr><th>Cliente</th><th>Fecha</th><th>Dirección</th><th>Teléfono</th><th>Concepto</th><th>Repuestos</th><th>Estado</th></tr></thead>
-                    <tbody>
-            `;
-            partes.forEach(p => {
-                const estadoClass = p.estado === 'Pendiente' ? 'estado-pendiente' : 'estado-finalizado';
-                html += `
-                    <tr>
-                        <td>${p.nombre} ${p.apellido}</td>
-                        <td>${formatearFecha(p.fecha)}</td>
-                        <td>${p.direccion}</td>
-                        <td>${p.telefono}</td>
-                        <td>${p.concepto || '-'}</td>
-                        <td>${p.repuestos || '-'}</td>
-                        <td class="${estadoClass}">${p.estado}</td>
-                    </tr>
-                `;
-            });
-            html += `</tbody></table></body></html>`;
-            win.document.write(html);
-            win.document.close();
-            win.print();
-        });
+$('btnAuth').addEventListener('click', async () => {
+  if (session) {
+    if (!confirm('¿Cerrar sesión?')) return;
+    await supabase.auth.signOut();
+  } else {
+    new bootstrap.Modal($('modalLogin')).show();
+  }
+});
 
-        // ============================================================
-        //  CARGA INICIAL
-        // ============================================================
-        cargarPartes();
-        cargarProveedores();
+$('formLogin').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('loginMsg').innerHTML = '';
+  const { error } = await supabase.auth.signInWithPassword({
+    email: $('loginEmail').value.trim(),
+    password: $('loginPass').value
+  });
+  if (error) {
+    $('loginMsg').innerHTML = `<div class="alert alert-danger py-2">${esc(error.message)}</div>`;
+    return;
+  }
+  bootstrap.Modal.getInstance($('modalLogin')).hide();
+  $('formLogin').reset();
+});
 
-        console.log('🚀 Aplicación iniciada con Firebase');
-    </script>
+// ============================================================
+// SOLICITUD PÚBLICA (CLIENTE)
+// ============================================================
+$('formSolicitud').addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload = {
+    nombre:      $('solNombre').value.trim(),
+    apellido:    $('solApellido').value.trim(),
+    telefono:    $('solTelefono').value.trim(),
+    email:       $('solEmail').value.trim(),
+    direccion:   $('solDireccion').value.trim(),
+    poblacion:   $('solPoblacion').value.trim(),
+    aparato:     $('solAparato').value.trim(),
+    descripcion: $('solDescripcion').value.trim(),
+    origen:      'web'
+  };
+  if (!payload.nombre || !payload.telefono || !payload.direccion || !payload.descripcion) {
+    $('msgSolicitud').innerHTML = `<div class="alert alert-warning">Rellena los campos obligatorios.</div>`;
+    return;
+  }
+  const { error } = await supabase.from('solicitudes').insert(payload);
+  if (error) {
+    $('msgSolicitud').innerHTML = `<div class="alert alert-danger">Error: ${esc(error.message)}</div>`;
+    return;
+  }
+  $('msgSolicitud').innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> ¡Solicitud enviada! El técnico te contactará.</div>`;
+  $('formSolicitud').reset();
+});
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+// Importar WhatsApp → rellena el formulario público
+$('btnProcesarImport').addEventListener('click', () => {
+  const texto = $('textoWhatsApp').value;
+  if (!texto.trim()) { alert('Pega el mensaje primero.'); return; }
+  const campos = {};
+  texto.split('\n').forEach(linea => {
+    const m = linea.match(/^\*?([^*:]+)\*?:\s*(.+)$/);
+    if (m) campos[m[1].trim().toLowerCase()] = m[2].trim();
+  });
+  const set = (id, keys) => {
+    for (const k of keys) if (campos[k]) { $(id).value = campos[k]; return; }
+  };
+  set('solNombre',    ['nombre']);
+  set('solApellido',  ['apellido','apellidos']);
+  set('solTelefono',  ['teléfono','telefono','tel']);
+  set('solEmail',     ['email','correo']);
+  set('solDireccion', ['dirección','direccion']);
+  set('solPoblacion', ['población','poblacion','ciudad']);
+  set('solAparato',   ['aparato','equipo','máquina']);
+  set('solDescripcion', ['descripción','descripcion','problema','avería']);
+  bootstrap.Modal.getInstance($('modalImportarWhatsApp')).hide();
+  $('textoWhatsApp').value = '';
+});
+
+// ============================================================
+// CARGA DE DATOS (TÉCNICO)
+// ============================================================
+async function cargarTodo() {
+  await Promise.all([cargarSolicitudes(), cargarPartes(), cargarProveedores()]);
+}
+
+async function cargarSolicitudes() {
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .select('*')
+    .eq('procesada', false)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  solicitudes = data || [];
+  renderSolicitudes();
+}
+
+async function cargarPartes() {
+  const { data, error } = await supabase
+    .from('partes')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  partes = data || [];
+  renderPartes();
+}
+
+async function cargarProveedores() {
+  const { data, error } = await supabase
+    .from('proveedores')
+    .select('*')
+    .order('nombre');
+  if (error) { console.error(error); return; }
+  proveedores = data || [];
+  renderProveedores();
+}
+
+// ============================================================
+// RENDER SOLICITUDES
+// ============================================================
+function renderSolicitudes() {
+  $('badgeSolicitudes').textContent = solicitudes.length;
+  const c = $('listaSolicitudes');
+  if (!solicitudes.length) {
+    c.innerHTML = '<p class="text-muted">No hay solicitudes pendientes.</p>';
+    return;
+  }
+  c.innerHTML = `<ul class="list-group">` + solicitudes.map(s => `
+    <li class="list-group-item solicitud-item" data-id="${s.id}">
+      <div class="d-flex justify-content-between">
+        <strong>${esc(s.nombre)} ${esc(s.apellido || '')}</strong>
+        <small class="text-muted">${fmtFecha(s.created_at)}</small>
+      </div>
+      <small class="text-muted d-block">${esc(s.telefono || '')} · ${esc(s.direccion || '')}</small>
+      ${s.aparato ? `<small class="text-muted d-block"><i class="fas fa-cog"></i> ${esc(s.aparato)}</small>` : ''}
+    </li>
+  `).join('') + `</ul>`;
+  c.querySelectorAll('.solicitud-item').forEach(li => {
+    li.addEventListener('click', () => {
+      solicitudSeleccionada = solicitudes.find(x => x.id === li.dataset.id);
+      renderDetalleSolicitud();
+    });
+  });
+}
+
+function renderDetalleSolicitud() {
+  const s = solicitudSeleccionada;
+  const c = $('detalleSolicitud');
+  if (!s) { c.innerHTML = '<p class="text-muted">Selecciona una solicitud.</p>'; return; }
+  c.innerHTML = `
+    <h5>${esc(s.nombre)} ${esc(s.apellido || '')}</h5>
+    <p class="mb-1"><strong>Teléfono:</strong> ${esc(s.telefono || '-')}</p>
+    <p class="mb-1"><strong>Email:</strong> ${esc(s.email || '-')}</p>
+    <p class="mb-1"><strong>Dirección:</strong> ${esc(s.direccion || '-')} ${s.poblacion ? '· ' + esc(s.poblacion) : ''}</p>
+    <p class="mb-1"><strong>Aparato:</strong> ${esc(s.aparato || '-')}</p>
+    <p class="mb-1"><strong>Descripción:</strong></p>
+    <p class="border rounded p-2 bg-light">${esc(s.descripcion || '')}</p>
+    <div class="mt-3">
+      <button id="btnConvertir" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Convertir en parte</button>
+      <button id="btnDescartarSol" class="btn btn-outline-danger"><i class="fas fa-times"></i> Descartar</button>
+    </div>
+  `;
+  $('btnConvertir').addEventListener('click', convertirEnParte);
+  $('btnDescartarSol').addEventListener('click', async () => {
+    if (!confirm('¿Descartar esta solicitud?')) return;
+    await supabase.from('solicitudes').delete().eq('id', s.id);
+    solicitudSeleccionada = null;
+    renderDetalleSolicitud();
+    cargarSolicitudes();
+  });
+}
+
+async function convertirEnParte() {
+  const s = solicitudSeleccionada;
+  if (!s) return;
+  const nuevo = {
+    cliente_nombre:    s.nombre,
+    cliente_apellido:  s.apellido,
+    cliente_telefono:  s.telefono,
+    cliente_email:     s.email,
+    cliente_direccion: s.direccion,
+    cliente_poblacion: s.poblacion,
+    aparato:           s.aparato,
+    observaciones:     s.descripcion,
+    fecha:             hoyISO(),
+    estado:            'Pendiente',
+    iva_pct:           21,
+    created_by:        session.user.id
+  };
+  const { data, error } = await supabase.from('partes').insert(nuevo).select().single();
+  if (error) { alert('Error: ' + error.message); return; }
+  await supabase.from('solicitudes').update({ procesada: true, parte_id: data.id }).eq('id', s.id);
+  solicitudSeleccionada = null;
+  renderDetalleSolicitud();
+  await cargarSolicitudes();
+  await cargarPartes();
+  // Abrir el parte recién creado
+  const tab = document.querySelector('[data-bs-target="#tabPartes"]');
+  new bootstrap.Tab(tab).show();
+  seleccionarParte(data.id);
+}
+
+// ============================================================
+// RENDER PARTES
+// ============================================================
+function renderPartes() {
+  const c = $('listaPartes');
+  if (!partes.length) {
+    c.innerHTML = '<p class="text-muted">No hay partes todavía.</p>';
+    return;
+  }
+  c.innerHTML = `<ul class="list-group">` + partes.map(p => {
+    const color = {
+      'Pendiente':'warning','En curso':'info','Finalizado':'success','Facturado':'primary','Anulado':'secondary'
+    }[p.estado] || 'secondary';
+    return `
+      <li class="list-group-item parte-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+        <div>
+          <strong>${esc(p.numero || 'S/N')}</strong> · ${esc(p.cliente_nombre || '')} ${esc(p.cliente_apellido || '')}<br>
+          <small class="text-muted">${fmtFecha(p.fecha)} · ${esc(p.cliente_direccion || '')}</small>
+        </div>
+        <span class="badge bg-${color} badge-estado">${esc(p.estado)}</span>
+      </li>`;
+  }).join('') + `</ul>`;
+  c.querySelectorAll('.parte-item').forEach(li => {
+    li.addEventListener('click', () => seleccionarParte(li.dataset.id));
+  });
+}
+
+async function seleccionarParte(id) {
+  parteSeleccionado = partes.find(p => p.id === id);
+  if (!parteSeleccionado) return;
+  // Cargar líneas de material
+  const { data, error } = await supabase
+    .from('materiales')
+    .select('*')
+    .eq('parte_id', id)
+    .order('orden');
+  if (error) { console.error(error); }
+  lineasMaterial = (data || []).map(m => ({
+    cantidad: Number(m.cantidad),
+    codigo: m.codigo || '',
+    descripcion: m.descripcion || '',
+    precio_unitario: Number(m.precio_unitario)
+  }));
+  renderDetalleParte();
+}
+
+// ============================================================
+// DETALLE / EDITOR DEL PARTE
+// ============================================================
+function renderDetalleParte() {
+  const p = parteSeleccionado;
+  const c = $('detalleParte');
+  if (!p) {
+    c.innerHTML = '<p class="text-muted">Selecciona un parte o crea uno nuevo.</p>';
+    $('btnImprimirParte').disabled = true;
+    $('btnEliminarParte').disabled = true;
+    return;
+  }
+  $('btnImprimirParte').disabled = false;
+  $('btnEliminarParte').disabled = false;
+
+  c.innerHTML = `
+    <form id="formParte">
+      <div class="row">
+        <div class="col-md-4 mb-2">
+          <label class="form-label small">Nº parte</label>
+          <input type="text" class="form-control form-control-sm" value="${esc(p.numero || '')}" readonly>
+        </div>
+        <div class="col-md-4 mb-2">
+          <label class="form-label small">Fecha</label>
+          <input type="date" class="form-control form-control-sm" id="pFecha" value="${p.fecha || hoyISO()}">
+        </div>
+        <div class="col-md-4 mb-2">
+          <label class="form-label small">Estado</label>
+          <select class="form-select form-select-sm" id="pEstado">
+            ${['Pendiente','En curso','Finalizado','Facturado','Anulado'].map(e =>
+              `<option ${p.estado===e?'selected':''}>${e}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <h6 class="mt-3 text-primary">Datos del cliente</h6>
+      <div class="row">
+        <div class="col-md-6 mb-2"><label class="form-label small">Nombre</label>
+          <input class="form-control form-control-sm" id="pNombre" value="${esc(p.cliente_nombre||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small">Apellido</label>
+          <input class="form-control form-control-sm" id="pApellido" value="${esc(p.cliente_apellido||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small">Teléfono</label>
+          <input class="form-control form-control-sm" id="pTelefono" value="${esc(p.cliente_telefono||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small">Email</label>
+          <input class="form-control form-control-sm" id="pEmail" value="${esc(p.cliente_email||'')}"></div>
+        <div class="col-md-8 mb-2"><label class="form-label small">Dirección</label>
+          <input class="form-control form-control-sm" id="pDireccion" value="${esc(p.cliente_direccion||'')}"></div>
+        <div class="col-md-4 mb-2"><label class="form-label small">Población</label>
+          <input class="form-control form-control-sm" id="pPoblacion" value="${esc(p.cliente_poblacion||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small">CIF / DNI</label>
+          <input class="form-control form-control-sm" id="pCif" value="${esc(p.cliente_cif||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small">Aparato</label>
+          <input class="form-control form-control-sm" id="pAparato" value="${esc(p.aparato||'')}"></div>
+      </div>
+
+      <div class="row mt-2">
+        <div class="col-md-3 mb-2"><label class="form-label small">Garantía</label>
+          <select class="form-select form-select-sm" id="pGarantia">
+            <option value="false" ${!p.garantia?'selected':''}>No</option>
+            <option value="true"  ${p.garantia?'selected':''}>Sí</option>
+          </select></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">F. Aviso</label>
+          <input type="date" class="form-control form-control-sm" id="pFAviso" value="${p.fecha_aviso||''}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">F. Visita</label>
+          <input type="date" class="form-control form-control-sm" id="pFVisita" value="${p.fecha_visita||''}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">Horas</label>
+          <input type="number" step="0.25" class="form-control form-control-sm" id="pHoras" value="${p.horas||''}"></div>
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small">Observaciones</label>
+        <textarea class="form-control form-control-sm" id="pObservaciones" rows="2">${esc(p.observaciones||'')}</textarea>
+      </div>
+
+      <h6 class="mt-3 text-primary d-flex justify-content-between">
+        <span>Material empleado</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddLinea">
+          <i class="fas fa-plus"></i> Añadir línea
+        </button>
+      </h6>
+      <table class="table table-sm" id="tablaMaterial">
+        <thead><tr>
+          <th style="width:70px">Cant.</th>
+          <th style="width:110px">Código</th>
+          <th>Descripción</th>
+          <th style="width:100px">Precio U.</th>
+          <th style="width:100px">Importe</th>
+          <th style="width:32px"></th>
+        </tr></thead>
+        <tbody id="tbodyMaterial"></tbody>
+      </table>
+
+      <h6 class="mt-3 text-primary">Trabajo efectuado</h6>
+      <textarea class="form-control form-control-sm mb-3" id="pTrabajo" rows="3">${esc(p.trabajo_efectuado||'')}</textarea>
+
+      <h6 class="text-primary">Mano de obra y desplazamientos</h6>
+      <div class="row">
+        <div class="col-md-3 mb-2"><label class="form-label small">Mano de obra</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" id="pManoObra" value="${p.mano_obra||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">Despl. ciudad</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" id="pDesplCiudad" value="${p.desplaz_ciudad||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">Despl. fuera</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" id="pDesplFuera" value="${p.desplaz_fuera||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">IVA %</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" id="pIva" value="${p.iva_pct||21}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">Km</label>
+          <input type="number" step="0.1" class="form-control form-control-sm" id="pKm" value="${p.km||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small">€/km</label>
+          <input type="number" step="0.01" class="form-control form-control-sm" id="pPrecioKm" value="${p.precio_km||0}"></div>
+      </div>
+
+      <div class="totales-box mt-3" id="totalesBox"></div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar cambios</button>
+        <button type="button" class="btn whatsapp-btn" id="btnPedirRepuestos">
+          <i class="fab fa-whatsapp"></i> Pedir repuestos a proveedor
+        </button>
+      </div>
+      <div id="msgParte" class="mt-2"></div>
+    </form>
+  `;
+
+  renderLineasMaterial();
+  recalcularTotales();
+
+  $('btnAddLinea').addEventListener('click', () => {
+    lineasMaterial.push({ cantidad: 1, codigo: '', descripcion: '', precio_unitario: 0 });
+    renderLineasMaterial();
+    recalcularTotales();
+  });
+
+  $('formParte').addEventListener('submit', guardarParte);
+  $('btnPedirRepuestos').addEventListener('click', pedirRepuestos);
+
+  ['pManoObra','pDesplCiudad','pDesplFuera','pKm','pPrecioKm','pIva'].forEach(id => {
+    $(id).addEventListener('input', recalcularTotales);
+  });
+}
+
+function renderLineasMaterial() {
+  const tbody = $('tbodyMaterial');
+  tbody.innerHTML = lineasMaterial.map((l, i) => `
+    <tr class="material-row" data-i="${i}">
+      <td><input type="number" step="0.01" class="form-control form-control-sm cant" value="${l.cantidad}"></td>
+      <td><input type="text" class="form-control form-control-sm cod" value="${esc(l.codigo)}"></td>
+      <td><input type="text" class="form-control form-control-sm desc" value="${esc(l.descripcion)}"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm precio" value="${l.precio_unitario}"></td>
+      <td class="text-end align-middle importe-cell">${eur(l.cantidad * l.precio_unitario)}</td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger btn-del" data-i="${i}"><i class="fas fa-times"></i></button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const i = +tr.dataset.i;
+    tr.querySelector('.cant').addEventListener('input', e => { lineasMaterial[i].cantidad = +e.target.value || 0; updateImporte(i, tr); recalcularTotales(); });
+    tr.querySelector('.cod').addEventListener('input', e => { lineasMaterial[i].codigo = e.target.value; });
+    tr.querySelector('.desc').addEventListener('input', e => { lineasMaterial[i].descripcion = e.target.value; });
+    tr.querySelector('.precio').addEventListener('input', e => { lineasMaterial[i].precio_unitario = +e.target.value || 0; updateImporte(i, tr); recalcularTotales(); });
+    tr.querySelector('.btn-del').addEventListener('click', () => {
+      lineasMaterial.splice(i, 1);
+      renderLineasMaterial();
+      recalcularTotales();
+    });
+  });
+}
+
+function updateImporte(i, tr) {
+  const l = lineasMaterial[i];
+  tr.querySelector('.importe-cell').textContent = eur(l.cantidad * l.precio_unitario);
+}
+
+function calcularTotales() {
+  const totalMaterial = lineasMaterial.reduce((s, l) => s + (Number(l.cantidad) * Number(l.precio_unitario)), 0);
+  const manoObra = +$('pManoObra')?.value || 0;
+  const dCiudad = +$('pDesplCiudad')?.value || 0;
+  const dFuera  = +$('pDesplFuera')?.value || 0;
+  const km      = +$('pKm')?.value || 0;
+  const pkm     = +$('pPrecioKm')?.value || 0;
+  const ivaPct  = +$('pIva')?.value || 21;
+  const kmImporte = km * pkm;
+  const base = totalMaterial + manoObra + dCiudad + dFuera + kmImporte;
+  const iva = base * (ivaPct / 100);
+  const total = base + iva;
+  return { totalMaterial, manoObra, dCiudad, dFuera, km, pkm, kmImporte, ivaPct, base, iva, total };
+}
+
+function recalcularTotales() {
+  const t = calcularTotales();
+  const box = $('totalesBox');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="d-flex justify-content-between"><span>Material</span><span>${eur(t.totalMaterial)}</span></div>
+    <div class="d-flex justify-content-between"><span>Mano de obra</span><span>${eur(t.manoObra)}</span></div>
+    <div class="d-flex justify-content-between"><span>Despl. ciudad</span><span>${eur(t.dCiudad)}</span></div>
+    <div class="d-flex justify-content-between"><span>Despl. fuera</span><span>${eur(t.dFuera)}</span></div>
+    <div class="d-flex justify-content-between"><span>Kilometraje (${t.km} × ${num(t.pkm)})</span><span>${eur(t.kmImporte)}</span></div>
+    <hr class="my-1">
+    <div class="d-flex justify-content-between fw-bold"><span>Base imponible</span><span>${eur(t.base)}</span></div>
+    <div class="d-flex justify-content-between"><span>IVA ${num(t.ivaPct)} %</span><span>${eur(t.iva)}</span></div>
+    <hr class="my-1">
+    <div class="d-flex justify-content-between total-final"><span>TOTAL</span><span>${eur(t.total)}</span></div>
+  `;
+}
+
+async function guardarParte(e) {
+  e.preventDefault();
+  if (!parteSeleccionado) return;
+  const actualizado = {
+    fecha:            $('pFecha').value || hoyISO(),
+    estado:           $('pEstado').value,
+    cliente_nombre:   $('pNombre').value.trim(),
+    cliente_apellido: $('pApellido').value.trim(),
+    cliente_telefono: $('pTelefono').value.trim(),
+    cliente_email:    $('pEmail').value.trim(),
+    cliente_direccion:$('pDireccion').value.trim(),
+    cliente_poblacion:$('pPoblacion').value.trim(),
+    cliente_cif:      $('pCif').value.trim(),
+    aparato:          $('pAparato').value.trim(),
+    garantia:         $('pGarantia').value === 'true',
+    fecha_aviso:      $('pFAviso').value || null,
+    fecha_visita:     $('pFVisita').value || null,
+    horas:            +$('pHoras').value || null,
+    observaciones:    $('pObservaciones').value.trim(),
+    trabajo_efectuado:$('pTrabajo').value.trim(),
+    mano_obra:        +$('pManoObra').value || 0,
+    desplaz_ciudad:   +$('pDesplCiudad').value || 0,
+    desplaz_fuera:    +$('pDesplFuera').value || 0,
+    km:               +$('pKm').value || 0,
+    precio_km:        +$('pPrecioKm').value || 0,
+    iva_pct:          +$('pIva').value || 21
+  };
+  const { error: e1 } = await supabase.from('partes').update(actualizado).eq('id', parteSeleccionado.id);
+  if (e1) { $('msgParte').innerHTML = `<div class="alert alert-danger py-2">${esc(e1.message)}</div>`; return; }
+
+  // Reemplazar líneas de material
+  await supabase.from('materiales').delete().eq('parte_id', parteSeleccionado.id);
+  const lineasLimpias = lineasMaterial.filter(l => l.descripcion.trim() || l.codigo.trim());
+  if (lineasLimpias.length) {
+    const ins = lineasLimpias.map((l, i) => ({
+      parte_id: parteSeleccionado.id,
+      orden: i,
+      cantidad: Number(l.cantidad) || 0,
+      codigo: l.codigo || null,
+      descripcion: l.descripcion || '',
+      precio_unitario: Number(l.precio_unitario) || 0
+    }));
+    const { error: e2 } = await supabase.from('materiales').insert(ins);
+    if (e2) { $('msgParte').innerHTML = `<div class="alert alert-danger py-2">${esc(e2.message)}</div>`; return; }
+  }
+  $('msgParte').innerHTML = `<div class="alert alert-success py-2">Parte guardado.</div>`;
+  await cargarPartes();
+  // Recargar el parte actual
+  parteSeleccionado = partes.find(p => p.id === parteSeleccionado.id);
+  setTimeout(() => { $('msgParte').innerHTML = ''; }, 2500);
+}
+
+// ============================================================
+// NUEVO PARTE / ELIMINAR
+// ============================================================
+$('btnNuevoParte').addEventListener('click', async () => {
+  const nuevo = {
+    fecha: hoyISO(),
+    estado: 'Pendiente',
+    iva_pct: 21,
+    created_by: session.user.id
+  };
+  const { data, error } = await supabase.from('partes').insert(nuevo).select().single();
+  if (error) { alert('Error: ' + error.message); return; }
+  await cargarPartes();
+  seleccionarParte(data.id);
+});
+
+$('btnEliminarParte').addEventListener('click', async () => {
+  if (!parteSeleccionado) return;
+  if (!confirm(`¿Eliminar el parte ${parteSeleccionado.numero}?`)) return;
+  const { error } = await supabase.from('partes').delete().eq('id', parteSeleccionado.id);
+  if (error) { alert('Error: ' + error.message); return; }
+  parteSeleccionado = null;
+  lineasMaterial = [];
+  await cargarPartes();
+  renderDetalleParte();
+});
+
+// ============================================================
+// IMPRIMIR PARTE — plantilla A4
+// ============================================================
+$('btnImprimirParte').addEventListener('click', () => {
+  if (!parteSeleccionado) return;
+  // Usamos los valores del formulario (sin guardar) para previsualizar exactamente lo que hay
+  const p = {
+    ...parteSeleccionado,
+    fecha:            $('pFecha').value,
+    cliente_nombre:   $('pNombre').value,
+    cliente_apellido: $('pApellido').value,
+    cliente_telefono: $('pTelefono').value,
+    cliente_email:    $('pEmail').value,
+    cliente_direccion:$('pDireccion').value,
+    cliente_poblacion:$('pPoblacion').value,
+    cliente_cif:      $('pCif').value,
+    aparato:          $('pAparato').value,
+    garantia:         $('pGarantia').value === 'true',
+    fecha_aviso:      $('pFAviso').value,
+    fecha_visita:     $('pFVisita').value,
+    horas:            $('pHoras').value,
+    observaciones:    $('pObservaciones').value,
+    trabajo_efectuado:$('pTrabajo').value,
+    mano_obra:        $('pManoObra').value,
+    desplaz_ciudad:   $('pDesplCiudad').value,
+    desplaz_fuera:    $('pDesplFuera').value,
+    km:               $('pKm').value,
+    precio_km:        $('pPrecioKm').value,
+    iva_pct:          $('pIva').value
+  };
+  const html = generarHTMLParte(p, lineasMaterial);
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+});
+
+function generarHTMLParte(p, lineas) {
+  const t = {
+    totalMaterial: lineas.reduce((s, l) => s + (Number(l.cantidad) * Number(l.precio_unitario)), 0),
+  };
+  t.manoObra = +p.mano_obra || 0;
+  t.dCiudad = +p.desplaz_ciudad || 0;
+  t.dFuera  = +p.desplaz_fuera || 0;
+  t.km      = +p.km || 0;
+  t.pkm     = +p.precio_km || 0;
+  t.kmImporte = t.km * t.pkm;
+  t.ivaPct  = +p.iva_pct || 21;
+  t.base    = t.totalMaterial + t.manoObra + t.dCiudad + t.dFuera + t.kmImporte;
+  t.iva     = t.base * (t.ivaPct / 100);
+  t.total   = t.base + t.iva;
+
+  const filas = lineas.filter(l => l.descripcion || l.codigo).map(l => `
+    <tr>
+      <td class="cant">${num(l.cantidad).replace(',00','')}</td>
+      <td class="cod">${esc(l.codigo || '')}</td>
+      <td>${esc(l.descripcion || '')}</td>
+      <td class="num">${eur(l.precio_unitario)}</td>
+      <td class="num">${eur(Number(l.cantidad) * Number(l.precio_unitario))}</td>
+    </tr>
+  `).join('');
+  const vacias = Math.max(0, 10 - lineas.filter(l => l.descripcion || l.codigo).length);
+  const filasVacias = '<tr><td class="cant"></td><td class="cod"></td><td></td><td class="num"></td><td class="num"></td></tr>'.repeat(vacias);
+
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Parte ${esc(p.numero || '')}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;color:#000}
+  @page{size:A4;margin:8mm}
+  body{padding:0}
+  .hoja{width:194mm;padding:4mm}
+  .cabecera{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1e3a8a;padding-bottom:2mm;margin-bottom:2mm}
+  .logo-caja{height:16mm;width:40mm;display:flex;align-items:center;color:#1e3a8a;font-weight:bold;font-size:16pt;letter-spacing:1px}
+  .empresa{text-align:right;font-size:8pt;line-height:1.3}
+  .empresa strong{font-size:9.5pt;color:#1e3a8a}
+  .banda{display:flex;border:1px solid #000;margin-bottom:2mm}
+  .banda>div{padding:1mm 2mm;border-right:1px solid #000;flex:1}
+  .banda>div:last-child{border-right:none}
+  .banda label{font-weight:bold;font-size:6.5pt;text-transform:uppercase;color:#555;display:block;margin-bottom:.3mm}
+  .banda .valor{font-size:9pt}
+  .titulo-fecha{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2mm}
+  .titulo-fecha h1{font-size:12pt;color:#1e3a8a;letter-spacing:.3px}
+  .titulo-fecha .num-fecha{text-align:right;font-size:9pt}
+  .titulo-fecha .num{font-weight:bold;font-size:11pt}
+  table.datos{width:100%;border-collapse:collapse;margin-bottom:2mm}
+  table.datos td{border:1px solid #000;padding:1mm 1.6mm;vertical-align:middle;font-size:9pt;height:6mm}
+  table.datos td.etiqueta{background:#eef2ff;font-weight:bold;font-size:7pt;text-transform:uppercase;color:#1e3a8a;width:20mm}
+  .seccion-titulo{background:#1e3a8a;color:#fff;padding:.9mm 2mm;font-size:8pt;font-weight:bold;letter-spacing:.3px;margin-top:2mm;text-transform:uppercase}
+  table.material{width:100%;border-collapse:collapse}
+  table.material th{background:#eef2ff;color:#1e3a8a;font-size:7pt;text-transform:uppercase;padding:.8mm;border:1px solid #000;text-align:left}
+  table.material td{border:1px solid #000;padding:.8mm 1.2mm;font-size:9pt;height:4.8mm;line-height:1}
+  table.material td.num{text-align:right;width:20mm}
+  table.material td.cant{text-align:center;width:12mm}
+  table.material td.cod{width:18mm}
+  .trabajo{border:1px solid #000;border-top:none;padding:1.5mm;min-height:22mm;font-size:9pt;white-space:pre-wrap;line-height:1.25}
+  .totales{display:flex;justify-content:flex-end;margin-top:2mm}
+  table.totales{width:74mm;border-collapse:collapse;font-size:9pt}
+  table.totales td{border:1px solid #000;padding:1mm 2mm}
+  table.totales td.concepto{background:#f8f9fa}
+  table.totales td.importe{text-align:right;width:22mm;font-variant-numeric:tabular-nums}
+  table.totales tr.base td{background:#eef2ff;font-weight:bold}
+  table.totales tr.total td{background:#1e3a8a;color:#fff;font-weight:bold;font-size:10.5pt}
+  .firmas{display:flex;justify-content:space-between;gap:8mm;margin-top:4mm}
+  .firma{flex:1;padding-top:1.2mm;text-align:center;font-size:8pt;color:#555}
+  .firma .linea-firma{height:12mm;border-bottom:1px solid #000}
+  .firma .rol{font-weight:bold;color:#000;font-size:8.5pt;margin-top:1mm}
+  .pie{margin-top:3mm;font-size:7pt;color:#777;text-align:center;border-top:1px solid #ccc;padding-top:1.5mm}
+</style></head>
+<body onload="setTimeout(()=>window.print(),300)">
+<div class="hoja">
+  <div class="cabecera">
+    <div class="logo-caja">Sertemi</div>
+    <div class="empresa">
+      <strong>Miguel González Conchado</strong><br>
+      Rua da Golpa Nº15 Bajo · Oleiros (Perillo)<br>
+      DNI 53.166.152-L · 648 859 699<br>
+      contacto@sertemi.es · sertemi.es
+    </div>
+  </div>
+
+  <div class="banda">
+    <div><label>Garantía</label><span class="valor">${p.garantia ? '☑ Sí &nbsp; ☐ No' : '☐ Sí &nbsp; ☑ No'}</span></div>
+    <div><label>F. Aviso</label><span class="valor">${p.fecha_aviso ? fmtFecha(p.fecha_aviso) : '____ / ____ / ______'}</span></div>
+    <div><label>F. Visita</label><span class="valor">${p.fecha_visita ? fmtFecha(p.fecha_visita) : '____ / ____ / ______'}</span></div>
+    <div><label>Horas</label><span class="valor">${p.horas ? num(p.horas) : '______'}</span></div>
+  </div>
+
+  <div class="titulo-fecha">
+    <h1>PARTE DE TRABAJO</h1>
+    <div class="num-fecha">
+      <div class="num">Nº ${esc(p.numero || '—')}</div>
+      <div>Fecha: ${fmtFecha(p.fecha)}</div>
+    </div>
+  </div>
+
+  <div class="seccion-titulo">Datos del cliente</div>
+  <table class="datos">
+    <tr><td class="etiqueta">Nombre</td><td colspan="3">${esc(p.cliente_nombre || '')} ${esc(p.cliente_apellido || '')}</td></tr>
+    <tr><td class="etiqueta">Dirección</td><td colspan="2">${esc(p.cliente_direccion || '')}</td><td class="etiqueta">Población</td></tr>
+    <tr><td class="etiqueta">CIF / DNI</td><td>${esc(p.cliente_cif || '')}</td><td class="etiqueta">Teléfono</td><td>${esc(p.cliente_telefono || '')}</td></tr>
+    <tr><td class="etiqueta">Aparato</td><td colspan="3">${esc(p.aparato || '')}</td></tr>
+    <tr><td class="etiqueta">Observaciones</td><td colspan="3">${esc(p.observaciones || '')}</td></tr>
+  </table>
+
+  <div class="seccion-titulo">Material empleado</div>
+  <table class="material">
+    <thead><tr>
+      <th style="width:12mm">Cant.</th><th style="width:18mm">Código</th><th>Descripción</th>
+      <th style="width:20mm;text-align:right">Precio U.</th><th style="width:20mm;text-align:right">Importe</th>
+    </tr></thead>
+    <tbody>${filas}${filasVacias}</tbody>
+  </table>
+
+  <div class="seccion-titulo">Trabajo efectuado</div>
+  <div class="trabajo">${esc(p.trabajo_efectuado || '')}</div>
+
+  <div class="totales">
+    <table class="totales">
+      <tr><td class="concepto">Material</td><td class="importe">${eur(t.totalMaterial)}</td></tr>
+      <tr><td class="concepto">Mano de obra${p.horas ? ' (' + num(p.horas) + ' h)' : ''}</td><td class="importe">${eur(t.manoObra)}</td></tr>
+      <tr><td class="concepto">Desplazamiento ciudad</td><td class="importe">${t.dCiudad ? eur(t.dCiudad) : '—'}</td></tr>
+      <tr><td class="concepto">Desplazamiento fuera</td><td class="importe">${t.dFuera ? eur(t.dFuera) : '—'}</td></tr>
+      <tr><td class="concepto">Kilometraje (${num(t.km).replace(',00','')} km × ${eur(t.pkm)})</td><td class="importe">${t.kmImporte ? eur(t.kmImporte) : '—'}</td></tr>
+      <tr class="base"><td>Base imponible</td><td class="importe">${eur(t.base)}</td></tr>
+      <tr><td class="concepto">IVA ${num(t.ivaPct)} %</td><td class="importe">${eur(t.iva)}</td></tr>
+      <tr class="total"><td>TOTAL</td><td class="importe">${eur(t.total)}</td></tr>
+    </table>
+  </div>
+
+  <div class="firmas">
+    <div class="firma"><div class="linea-firma"></div><div class="rol">Recibí — Técnico</div></div>
+    <div class="firma"><div class="linea-firma"></div><div class="rol">Conforme — Cliente</div></div>
+  </div>
+
+  <div class="pie">
+    Sertemi · Miguel González Conchado · DNI 53.166.152-L · Rua da Golpa Nº15 Bajo, Oleiros (A Coruña) · 648 859 699
+  </div>
+</div>
+</body></html>`;
+}
+
+// ============================================================
+// PEDIR REPUESTOS A PROVEEDOR (WhatsApp)
+// ============================================================
+function pedirRepuestos() {
+  const repuestos = lineasMaterial.filter(l => l.descripcion).map(l => `${l.cantidad}× ${l.descripcion}`).join(', ');
+  if (!repuestos) {
+    $('msgParte').innerHTML = `<div class="alert alert-warning py-2">Añade primero alguna línea de material.</div>`;
+    return;
+  }
+  if (!proveedores.length) {
+    $('msgParte').innerHTML = `<div class="alert alert-warning py-2">No hay proveedores. Añádelos en la pestaña Proveedores.</div>`;
+    return;
+  }
+  const lista = proveedores.map((p, i) => `${i + 1}. ${p.nombre} — ${p.telefono}`).join('\n');
+  const elegido = prompt(`¿A qué proveedor?\n\n${lista}\n\nEscribe el número:`);
+  if (!elegido) return;
+  const prov = proveedores[+elegido - 1];
+  if (!prov) { $('msgParte').innerHTML = `<div class="alert alert-danger py-2">Selección inválida.</div>`; return; }
+  const msg = `Hola ${prov.nombre}, necesito los siguientes repuestos: ${repuestos}. ¿Puedes cotizarme? Gracias.`;
+  const tel = String(prov.telefono).replace(/\D/g, '');
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ============================================================
+// PROVEEDORES
+// ============================================================
+function renderProveedores() {
+  const c = $('listaProveedores');
+  if (!proveedores.length) {
+    c.innerHTML = '<p class="text-muted">No hay proveedores.</p>';
+    return;
+  }
+  c.innerHTML = `<ul class="list-group">` + proveedores.map(p => `
+    <li class="list-group-item proveedor-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+      <div>
+        <strong>${esc(p.nombre)}</strong><br>
+        <small class="text-muted">${esc(p.telefono)}${p.productos ? ' · ' + esc(p.productos) : ''}</small>
+      </div>
+      <i class="fas fa-edit text-muted"></i>
+    </li>
+  `).join('') + `</ul>`;
+  c.querySelectorAll('.proveedor-item').forEach(li => {
+    li.addEventListener('click', () => {
+      const p = proveedores.find(x => x.id === li.dataset.id);
+      if (!p) return;
+      $('provId').value = p.id;
+      $('provNombre').value = p.nombre || '';
+      $('provTelefono').value = p.telefono || '';
+      $('provProductos').value = p.productos || '';
+      $('provEmail').value = p.email || '';
+    });
+  });
+}
+
+$('formProveedor').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = $('provId').value;
+  const payload = {
+    nombre: $('provNombre').value.trim(),
+    telefono: $('provTelefono').value.trim(),
+    productos: $('provProductos').value.trim(),
+    email: $('provEmail').value.trim()
+  };
+  if (!payload.nombre || !payload.telefono) {
+    $('msgProveedor').innerHTML = `<div class="alert alert-warning py-2">Nombre y teléfono obligatorios.</div>`;
+    return;
+  }
+  const { error } = id
+    ? await supabase.from('proveedores').update(payload).eq('id', id)
+    : await supabase.from('proveedores').insert(payload);
+  if (error) { $('msgProveedor').innerHTML = `<div class="alert alert-danger py-2">${esc(error.message)}</div>`; return; }
+  $('msgProveedor').innerHTML = `<div class="alert alert-success py-2">Guardado.</div>`;
+  $('formProveedor').reset();
+  $('provId').value = '';
+  await cargarProveedores();
+  setTimeout(() => { $('msgProveedor').innerHTML = ''; }, 2500);
+});
+
+$('btnNuevoProveedor').addEventListener('click', () => {
+  $('formProveedor').reset();
+  $('provId').value = '';
+  $('msgProveedor').innerHTML = '';
+  $('provNombre').focus();
+});
+
+$('btnCancelarProv').addEventListener('click', () => {
+  $('formProveedor').reset();
+  $('provId').value = '';
+  $('msgProveedor').innerHTML = '';
+});
+
+console.log('✅ Sertemi listo');
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
