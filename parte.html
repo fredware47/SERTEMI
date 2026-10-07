@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Parte de trabajo - Sertemi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; color: #000; }
+
+  @page { size: A4; margin: 10mm; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    .hoja { box-shadow: none; margin: 0; padding: 0; }
+  }
+
+  body { background: #eee; padding: 20px; }
+
+  .hoja {
+    width: 190mm;
+    min-height: 277mm;
+    margin: 0 auto;
+    background: #fff;
+    padding: 6mm;
+    box-shadow: 0 0 8px rgba(0,0,0,.2);
+  }
+
+  /* ===== CABECERA ===== */
+  .cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #1e3a8a;
+    padding-bottom: 4mm;
+    margin-bottom: 3mm;
+  }
+  .logo { height: 22mm; }
+  .empresa {
+    text-align: right;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+  .empresa strong { font-size: 10.5pt; color: #1e3a8a; }
+  .empresa a { color: #000; text-decoration: none; }
+
+  /* ===== BANDA GARANTÍA / FECHAS ===== */
+  .banda {
+    display: flex;
+    border: 1px solid #000;
+    margin-bottom: 3mm;
+  }
+  .banda > div {
+    padding: 1.5mm 2mm;
+    border-right: 1px solid #000;
+    flex: 1;
+    font-size: 9.5pt;
+  }
+  .banda > div:last-child { border-right: none; }
+  .banda label {
+    font-weight: bold;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    color: #555;
+    display: block;
+    margin-bottom: .8mm;
+  }
+  .banda .valor { font-size: 10pt; }
+
+  /* ===== TÍTULO PARTE + FECHA ===== */
+  .titulo-fecha {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 3mm;
+  }
+  .titulo-fecha h1 {
+    font-size: 14pt;
+    color: #1e3a8a;
+    letter-spacing: .5px;
+  }
+  .titulo-fecha .num-fecha {
+    text-align: right;
+    font-size: 10pt;
+  }
+  .titulo-fecha .num { font-weight: bold; font-size: 12pt; }
+
+  /* ===== TABLA DATOS CLIENTE ===== */
+  table.datos {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+  }
+  table.datos td {
+    border: 1px solid #000;
+    padding: 1.6mm 2mm;
+    vertical-align: top;
+    font-size: 10pt;
+  }
+  table.datos td.etiqueta {
+    background: #eef2ff;
+    font-weight: bold;
+    font-size: 8pt;
+    text-transform: uppercase;
+    color: #1e3a8a;
+    width: 22mm;
+  }
+
+  /* ===== SECCIONES ===== */
+  .seccion-titulo {
+    background: #1e3a8a;
+    color: #fff;
+    padding: 1.2mm 2mm;
+    font-size: 9pt;
+    font-weight: bold;
+    letter-spacing: .5px;
+    margin-top: 3mm;
+    margin-bottom: 0;
+    text-transform: uppercase;
+  }
+
+  /* ===== TABLA MATERIAL ===== */
+  table.material {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  table.material th {
+    background: #eef2ff;
+    color: #1e3a8a;
+    font-size: 8pt;
+    text-transform: uppercase;
+    padding: 1.2mm;
+    border: 1px solid #000;
+    text-align: left;
+  }
+  table.material td {
+    border: 1px solid #000;
+    padding: 1.2mm 1.5mm;
+    font-size: 9.5pt;
+    height: 6.5mm;
+  }
+  table.material td.num { text-align: right; width: 22mm; }
+  table.material td.cant { text-align: center; width: 14mm; }
+  table.material td.cod { width: 20mm; }
+
+  /* ===== TRABAJO EFECTUADO ===== */
+  .trabajo {
+    border: 1px solid #000;
+    border-top: none;
+    padding: 2mm;
+    min-height: 32mm;
+    font-size: 9.5pt;
+    white-space: pre-wrap;
+  }
+
+  /* ===== NOTA REPARACIÓN (totales) ===== */
+  .totales {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 3mm;
+  }
+  table.totales {
+    width: 80mm;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  table.totales td {
+    border: 1px solid #000;
+    padding: 1.3mm 2mm;
+  }
+  table.totales td.concepto { background: #f8f9fa; }
+  table.totales td.importe { text-align: right; width: 24mm; font-variant-numeric: tabular-nums; }
+  table.totales tr.base td { background: #eef2ff; font-weight: bold; }
+  table.totales tr.total td {
+    background: #1e3a8a;
+    color: #fff;
+    font-weight: bold;
+    font-size: 11pt;
+  }
+
+  /* ===== FIRMAS ===== */
+  .firmas {
+    display: flex;
+    justify-content: space-between;
+    gap: 10mm;
+    margin-top: 8mm;
+  }
+  .firma {
+    flex: 1;
+    border-top: 1px solid #000;
+    padding-top: 1.5mm;
+    text-align: center;
+    font-size: 9pt;
+    color: #555;
+    min-height: 20mm;
+  }
+  .firma .rol { font-weight: bold; color: #000; margin-bottom: 1mm; font-size: 9.5pt; }
+  .firma .linea-firma { height: 14mm; }
+
+  /* ===== PIE ===== */
+  .pie {
+    margin-top: 5mm;
+    font-size: 7.5pt;
+    color: #777;
+    text-align: center;
+    border-top: 1px solid #ccc;
+    padding-top: 2mm;
+  }
+
+  /* Botón imprimir */
+  .no-print.botones { text-align: center; margin-bottom: 12px; }
+  .no-print button {
+    background: #1e3a8a; color: #fff; border: 0;
+    padding: 10px 24px; border-radius: 6px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .no-print button:hover { background: #152a63; }
+</style>
+</head>
+<body>
+
+<div class="no-print botones">
+  <button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+</div>
+
+<div class="hoja">
+
+  <!-- ============ CABECERA ============ -->
+  <div class="cabecera">
+    <img src="logo-sertemi.png" alt="Sertemi" class="logo" onerror="this.style.display='none'">
+    <div class="empresa">
+      <strong>Miguel González Conchado</strong><br>
+      Rua da Golpa Nº15 Bajo · Oleiros (Perillo)<br>
+      DNI 53.166.152-L<br>
+      648 859 699<br>
+      <a href="mailto:contacto@sertemi.es">contacto@sertemi.es</a> · sertemi.es
+    </div>
+  </div>
+
+  <!-- ============ GARANTÍA / FECHAS ============ -->
+  <div class="banda">
+    <div>
+      <label>Garantía</label>
+      <span class="valor">☐ Sí &nbsp; ☑ No</span>
+    </div>
+    <div>
+      <label>F. Aviso</label>
+      <span class="valor">____ / ____ / ______</span>
+    </div>
+    <div>
+      <label>F. Visita</label>
+      <span class="valor">07 / 10 / 2026</span>
+    </div>
+    <div>
+      <label>Horas</label>
+      <span class="valor">______</span>
+    </div>
+  </div>
+
+  <!-- ============ TÍTULO + Nº + FECHA ============ -->
+  <div class="titulo-fecha">
+    <h1>PARTE DE TRABAJO</h1>
+    <div class="num-fecha">
+      <div class="num">Nº 2026-0001</div>
+      <div>Fecha: 07/10/2026</div>
+    </div>
+  </div>
+
+  <!-- ============ DATOS CLIENTE ============ -->
+  <div class="seccion-titulo">Datos del cliente</div>
+  <table class="datos">
+    <tr>
+      <td class="etiqueta">Nombre</td>
+      <td colspan="3">Juan Pérez Rodríguez</td>
+    </tr>
+    <tr>
+      <td class="etiqueta">Dirección</td>
+      <td colspan="2">Calle Mayor 12, 3ºB</td>
+      <td class="etiqueta">Población</td>
+    </tr>
+    <tr>
+      <td class="etiqueta">CIF / DNI</td>
+      <td>12345678A</td>
+      <td class="etiqueta">Teléfono</td>
+      <td>612 345 678</td>
+    </tr>
+    <tr>
+      <td class="etiqueta">Aparato</td>
+      <td colspan="3">Caldera Vaillant ecoTEC plus VMW 246/5-5</td>
+    </tr>
+    <tr>
+      <td class="etiqueta">Observaciones</td>
+      <td colspan="3">Cliente indica que hace ruido al arrancar y no alcanza temperatura.</td>
+    </tr>
+  </table>
+
+  <!-- ============ MATERIAL EMPLEADO ============ -->
+  <div class="seccion-titulo">Material empleado</div>
+  <table class="material">
+    <thead>
+      <tr>
+        <th style="width:14mm">Cant.</th>
+        <th style="width:20mm">Código</th>
+        <th>Descripción</th>
+        <th style="width:22mm;text-align:right">Precio U.</th>
+        <th style="width:22mm;text-align:right">Importe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="cant">1</td><td class="cod">VAI-00234</td><td>Válvula de 3 vías Vaillant</td><td class="num">48,50 €</td><td class="num">48,50 €</td></tr>
+      <tr><td class="cant">2</td><td class="cod">JUN-001</td><td>Junta de goma 1/2"</td><td class="num">1,20 €</td><td class="num">2,40 €</td></tr>
+      <tr><td class="cant">1</td><td class="cod">REF-018</td><td>Refrigerante R-410A (recarga)</td><td class="num">35,00 €</td><td class="num">35,00 €</td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+      <tr><td class="cant"></td><td></td><td></td><td class="num"></td><td class="num"></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ TRABAJO EFECTUADO ============ -->
+  <div class="seccion-titulo">Trabajo efectuado</div>
+  <div class="trabajo">Se procede a desmontar la válvula de 3 vías, se sustituye por una nueva y se revisa el circuito. Se purga el sistema y se comprueba presión. Se recarga refrigerante y se verifica funcionamiento. Prueba satisfactoria.</div>
+
+  <!-- ============ NOTA DE REPARACIÓN ============ -->
+  <div class="totales">
+    <table class="totales">
+      <tr><td class="concepto">Material</td><td class="importe">85,90 €</td></tr>
+      <tr><td class="concepto">Mano de obra (1,5 h)</td><td class="importe">60,00 €</td></tr>
+      <tr><td class="concepto">Desplazamiento ciudad</td><td class="importe">15,00 €</td></tr>
+      <tr><td class="concepto">Desplazamiento fuera</td><td class="importe">—</td></tr>
+      <tr><td class="concepto">Kilometraje (12 km × 0,26 €)</td><td class="importe">3,12 €</td></tr>
+      <tr class="base"><td>Base imponible</td><td class="importe">164,02 €</td></tr>
+      <tr><td class="concepto">IVA 21 %</td><td class="importe">34,44 €</td></tr>
+      <tr class="total"><td>TOTAL</td><td class="importe">198,46 €</td></tr>
+    </table>
+  </div>
+
+  <!-- ============ FIRMAS ============ -->
+  <div class="firmas">
+    <div class="firma">
+      <div class="linea-firma"></div>
+      <div class="rol">Recibí — Técnico</div>
+    </div>
+    <div class="firma">
+      <div class="linea-firma"></div>
+      <div class="rol">Conforme — Cliente</div>
+    </div>
+  </div>
+
+  <!-- ============ PIE ============ -->
+  <div class="pie">
+    Sertemi · Miguel González Conchado · DNI 53.166.152-L · Rua da Golpa Nº15 Bajo, Oleiros (A Coruña) · 648 859 699
+  </div>
+
+</div>
+
+</body>
+</html>
