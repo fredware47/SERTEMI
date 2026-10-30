@@ -104,8 +104,16 @@
   <!-- ==================== VISTA TÉCNICO ==================== -->
   <div id="vistaTecnico">
     <ul class="nav nav-tabs mb-3" role="tablist">
-      <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSolicitudes" type="button">📥 Solicitudes <span id="badgeSolicitudes" class="badge bg-danger ms-1">0</span></button></li>
-      <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPartes" type="button">📝 Partes</button></li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSolicitudes" type="button">
+          📥 Solicitudes <span id="badgeSolicitudes" class="badge bg-danger ms-1">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPartes" type="button">
+          📝 Partes <span id="badgePartesNuevos" class="badge bg-danger ms-1 d-none">0</span>
+        </button>
+      </li>
       <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabClientes" type="button">👥 Clientes</button></li>
       <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCatalogo" type="button">📦 Catálogo</button></li>
       <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProveedores" type="button">🏢 Proveedores</button></li>
@@ -311,7 +319,7 @@
   </div>
 </div>
 
-<!-- MODAL NUEVO MATERIAL RÁPIDO (desde editor de parte) -->
+<!-- MODAL NUEVO MATERIAL RÁPIDO -->
 <div class="modal fade" id="modalMatRapido" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -366,6 +374,12 @@ const eur = n => (Number(n)||0).toFixed(2).replace('.',',') + ' €';
 const num = n => (Number(n)||0).toFixed(2).replace('.',',');
 const fmtFecha = f => f ? new Date(f).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 const hoyISO = () => new Date().toISOString().slice(0,10);
+
+function esParteNuevo(p) {
+  return p && p.created_at
+    && (Date.now() - new Date(p.created_at).getTime()) < 30 * 60 * 1000
+    && p.estado === 'Pendiente';
+}
 
 // ============ AUTH ============
 supabase.auth.onAuthStateChange((_e, s) => actualizarUI(s));
@@ -437,7 +451,10 @@ $('formSolicitud').addEventListener('submit', async e => {
   }
   const { error } = await supabase.from('solicitudes').insert(p);
   if (error) { $('msgSolicitud').innerHTML = `<div class="alert alert-danger">Error: ${esc(error.message)}</div>`; return; }
-  $('msgSolicitud').innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ¡Solicitud enviada! El técnico te contactará.</div>';
+  $('msgSolicitud').innerHTML = `<div class="alert alert-success">
+    <i class="fas fa-check-circle"></i> ¡Solicitud enviada!<br>
+    <small>El técnico ya tiene tu parte preparado con los datos que nos has dado. Te contactará en breve.</small>
+  </div>`;
   $('formSolicitud').reset();
 });
 
@@ -533,6 +550,10 @@ function renderDetalleSolicitud() {
 async function convertirEnParte() {
   const s = solicitudSel;
   if (!s) return;
+  if (s.parte_id) {
+    alert('Esta solicitud ya tiene un parte asociado (el trigger ya lo creó). Ve a la pestaña Partes.');
+    return;
+  }
   let clienteId = null;
   if (s.telefono) {
     const existente = clientes.find(c => c.telefono === s.telefono);
@@ -572,16 +593,32 @@ async function convertirEnParte() {
 // ============ PARTES ============
 function renderPartes() {
   const c = $('listaPartes');
-  if (!partes.length) { c.innerHTML = '<p class="text-muted">No hay partes todavía.</p>'; return; }
-  c.innerHTML = '<ul class="list-group">' + partes.map(p => {
-    const color = {'Pendiente':'warning','En curso':'info','Finalizado':'success','Facturado':'primary','Anulado':'secondary'}[p.estado] || 'secondary';
-    return `<li class="list-group-item parte-item d-flex justify-content-between align-items-center" data-id="${p.id}">
-      <div><strong>${esc(p.numero||'S/N')}</strong> · ${esc(p.cliente_nombre||'')} ${esc(p.cliente_apellido||'')}<br>
-      <small class="text-muted">${fmtFecha(p.fecha)} · ${esc(p.cliente_direccion||'')}</small></div>
-      <span class="badge bg-${color} badge-estado">${esc(p.estado)}</span>
-    </li>`;
-  }).join('') + '</ul>';
-  c.querySelectorAll('.parte-item').forEach(li => li.addEventListener('click', () => seleccionarParte(li.dataset.id)));
+  if (!partes.length) {
+    c.innerHTML = '<p class="text-muted">No hay partes todavía.</p>';
+  } else {
+    c.innerHTML = '<ul class="list-group">' + partes.map(p => {
+      const color = {'Pendiente':'warning','En curso':'info','Finalizado':'success','Facturado':'primary','Anulado':'secondary'}[p.estado] || 'secondary';
+      const esNuevo = esParteNuevo(p);
+      return `<li class="list-group-item parte-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+        <div>
+          <strong>${esc(p.numero||'S/N')}</strong> · ${esc(p.cliente_nombre||'')} ${esc(p.cliente_apellido||'')}
+          ${esNuevo ? '<span class="badge bg-danger ms-2">NUEVO</span>' : ''}
+          <br>
+          <small class="text-muted">${fmtFecha(p.fecha)} · ${esc(p.cliente_direccion||'')}</small>
+        </div>
+        <span class="badge bg-${color} badge-estado">${esc(p.estado)}</span>
+      </li>`;
+    }).join('') + '</ul>';
+    c.querySelectorAll('.parte-item').forEach(li => li.addEventListener('click', () => seleccionarParte(li.dataset.id)));
+  }
+
+  // Badge de partes nuevos en la pestaña
+  const nuevos = partes.filter(esParteNuevo).length;
+  const badge = $('badgePartesNuevos');
+  if (badge) {
+    badge.textContent = nuevos;
+    badge.classList.toggle('d-none', nuevos === 0);
+  }
 }
 
 async function seleccionarParte(id) {
@@ -602,7 +639,6 @@ function renderDetalleParte() {
   $('btnImprimirParte').disabled = false;
   $('btnEliminarParte').disabled = false;
 
-  // Datalist de clientes para autocompletar el nombre
   const datalistCli = `<datalist id="datalistClientes">${clientes.map(cl => `<option value="${esc(((cl.nombre||'') + ' ' + (cl.apellido||'')).trim())}"></option>`).join('')}</datalist>`;
 
   c.innerHTML = `
@@ -691,7 +727,6 @@ function renderDetalleParte() {
   $('btnBuscarCli').addEventListener('click', abrirBuscarCliente);
   ['pManoObra','pDesplCiudad','pDesplFuera','pKm','pPrecioKm','pIva'].forEach(id => $(id).addEventListener('input', recalcularTotales));
 
-  // Autocompletado: al cambiar el nombre, buscar cliente por nombre completo y rellenar
   $('pNombre').addEventListener('change', e => {
     const val = e.target.value.trim().toLowerCase();
     if (!val) return;
@@ -840,7 +875,6 @@ async function guardarParte(e) {
   setTimeout(() => { $('msgParte').innerHTML = ''; }, 2500);
 }
 
-// Nuevo material al vuelo
 $('btnGuardarMatRapido').addEventListener('click', async () => {
   const d = $('rpDescripcion').value.trim(), p = +$('rpPrecio').value;
   if (!d || !p) { alert('Descripción y precio obligatorios.'); return; }
@@ -860,7 +894,6 @@ $('btnGuardarMatRapido').addEventListener('click', async () => {
   materialRapidoParaLinea = null;
 });
 
-// ============ BUSCAR CLIENTE (MODAL) ============
 function abrirBuscarCliente() {
   $('inputBuscarCli').value = '';
   renderBuscarCliente('');
@@ -899,7 +932,6 @@ function renderBuscarCliente(filtro) {
 
 $('inputBuscarCli').addEventListener('input', e => renderBuscarCliente(e.target.value));
 
-// ============ NUEVO PARTE / ELIMINAR ============
 $('btnNuevoParte').addEventListener('click', async () => {
   const { data, error } = await supabase.from('partes').insert({ fecha: hoyISO(), estado: 'Pendiente', iva_pct: 21, created_by: session.user.id }).select().single();
   if (error) { alert('Error: ' + error.message); return; }
@@ -1177,6 +1209,15 @@ table.totales tr.total td{background:#1e3a8a;color:#fff;font-weight:bold;font-si
 </div>
 </body></html>`;
 }
+
+// ============ AUTO-REFRESCO ============
+// Refrescar automáticamente cada 30s si hay sesión y la pestaña está visible
+setInterval(() => {
+  if (session && !document.hidden) {
+    cargarPartes();
+    cargarSolicitudes();
+  }
+}, 30000);
 
 console.log('✅ Sertemi listo');
 </script>
