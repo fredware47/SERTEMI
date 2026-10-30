@@ -12,12 +12,12 @@
   .card-header { background-color: #1e3a8a; color: #fff; font-weight: bold; }
   .nav-tabs .nav-link.active { background-color: #1e3a8a; color: #fff; border-color: #1e3a8a; }
   .nav-tabs .nav-link { color: #1e3a8a; }
-  .solicitud-item, .parte-item, .proveedor-item, .cliente-item, .material-cat-item { cursor: pointer; transition: background .15s; }
-  .solicitud-item:hover, .parte-item:hover, .proveedor-item:hover, .cliente-item:hover, .material-cat-item:hover { background-color: #eef2ff; }
+  .solicitud-item, .parte-item, .proveedor-item, .cliente-item, .material-cat-item, .cliente-buscar-item { cursor: pointer; transition: background .15s; }
+  .solicitud-item:hover, .parte-item:hover, .proveedor-item:hover, .cliente-item:hover, .material-cat-item:hover, .cliente-buscar-item:hover { background-color: #eef2ff; }
   .badge-estado { font-size: .8rem; }
   .whatsapp-btn { background-color: #25D366; color: #fff; border: none; }
   .whatsapp-btn:hover { background-color: #128C7E; color: #fff; }
-  #listaPartes, #listaSolicitudes, #listaClientes, #listaCatalogo { max-height: 480px; overflow-y: auto; }
+  #listaPartes, #listaSolicitudes, #listaClientes, #listaCatalogo, #resultadosBuscarCli { max-height: 480px; overflow-y: auto; }
   .modal-textarea { min-height: 180px; font-family: monospace; }
   #vistaTecnico { display: none; }
   #vistaTecnico.activa { display: block; }
@@ -50,21 +50,45 @@
           <div class="card-header"><i class="fas fa-clipboard-list"></i> Solicitud de reparación</div>
           <div class="card-body">
             <p class="text-muted small mb-3">Rellena tus datos y describe el problema. El técnico recibirá tu solicitud y se pondrá en contacto contigo.</p>
-            <form id="formSolicitud">
+            <form id="formSolicitud" autocomplete="on">
               <div class="row">
-                <div class="col-md-6 mb-3"><label class="form-label">Nombre *</label><input type="text" class="form-control" id="solNombre" required></div>
-                <div class="col-md-6 mb-3"><label class="form-label">Apellido</label><input type="text" class="form-control" id="solApellido"></div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="solNombre">Nombre *</label>
+                  <input type="text" class="form-control" id="solNombre" name="given-name" autocomplete="given-name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="solApellido">Apellido</label>
+                  <input type="text" class="form-control" id="solApellido" name="family-name" autocomplete="family-name">
+                </div>
               </div>
               <div class="row">
-                <div class="col-md-6 mb-3"><label class="form-label">Teléfono *</label><input type="tel" class="form-control" id="solTelefono" required></div>
-                <div class="col-md-6 mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="solEmail"></div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="solTelefono">Teléfono *</label>
+                  <input type="tel" class="form-control" id="solTelefono" name="telefono" autocomplete="tel" inputmode="tel" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="solEmail">Email</label>
+                  <input type="email" class="form-control" id="solEmail" name="email" autocomplete="email">
+                </div>
               </div>
               <div class="row">
-                <div class="col-md-8 mb-3"><label class="form-label">Dirección *</label><input type="text" class="form-control" id="solDireccion" required></div>
-                <div class="col-md-4 mb-3"><label class="form-label">Población</label><input type="text" class="form-control" id="solPoblacion"></div>
+                <div class="col-md-8 mb-3">
+                  <label class="form-label" for="solDireccion">Dirección *</label>
+                  <input type="text" class="form-control" id="solDireccion" name="direccion" autocomplete="street-address" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label" for="solPoblacion">Población</label>
+                  <input type="text" class="form-control" id="solPoblacion" name="poblacion" autocomplete="address-level2">
+                </div>
               </div>
-              <div class="mb-3"><label class="form-label">Aparato (marca y modelo si lo sabes)</label><input type="text" class="form-control" id="solAparato" placeholder="Ej: Caldera Vaillant ecoTEC"></div>
-              <div class="mb-3"><label class="form-label">¿Qué problema tiene? *</label><textarea class="form-control" id="solDescripcion" rows="3" required placeholder="Ej: Hace un ruido raro y no calienta el agua"></textarea></div>
+              <div class="mb-3">
+                <label class="form-label" for="solAparato">Aparato (marca y modelo si lo sabes)</label>
+                <input type="text" class="form-control" id="solAparato" name="aparato" placeholder="Ej: Caldera Vaillant ecoTEC">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="solDescripcion">¿Qué problema tiene? *</label>
+                <textarea class="form-control" id="solDescripcion" name="descripcion" rows="3" required placeholder="Ej: Hace un ruido raro y no calienta el agua"></textarea>
+              </div>
               <div class="d-grid gap-2 d-md-flex">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Enviar solicitud</button>
                 <button type="button" class="btn whatsapp-btn" data-bs-toggle="modal" data-bs-target="#modalImportarWhatsApp"><i class="fab fa-whatsapp"></i> Importar de WhatsApp</button>
@@ -143,17 +167,17 @@
             <div class="card">
               <div class="card-header">Editar cliente</div>
               <div class="card-body">
-                <form id="formCliente">
+                <form id="formCliente" autocomplete="on">
                   <input type="hidden" id="cliId">
                   <div class="row">
-                    <div class="col-md-6 mb-2"><label class="form-label small">Nombre *</label><input class="form-control form-control-sm" id="cliNombre" required></div>
-                    <div class="col-md-6 mb-2"><label class="form-label small">Apellido</label><input class="form-control form-control-sm" id="cliApellido"></div>
-                    <div class="col-md-6 mb-2"><label class="form-label small">Teléfono *</label><input class="form-control form-control-sm" id="cliTelefono" required></div>
-                    <div class="col-md-6 mb-2"><label class="form-label small">Email</label><input class="form-control form-control-sm" id="cliEmail"></div>
-                    <div class="col-md-6 mb-2"><label class="form-label small">CIF / DNI</label><input class="form-control form-control-sm" id="cliCif"></div>
-                    <div class="col-md-6 mb-2"><label class="form-label small">Población</label><input class="form-control form-control-sm" id="cliPoblacion"></div>
-                    <div class="col-12 mb-2"><label class="form-label small">Dirección</label><input class="form-control form-control-sm" id="cliDireccion"></div>
-                    <div class="col-12 mb-2"><label class="form-label small">Notas</label><textarea class="form-control form-control-sm" id="cliNotas" rows="2"></textarea></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliNombre">Nombre *</label><input class="form-control form-control-sm" id="cliNombre" name="cli-nombre" autocomplete="given-name" required></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliApellido">Apellido</label><input class="form-control form-control-sm" id="cliApellido" name="cli-apellido" autocomplete="family-name"></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliTelefono">Teléfono *</label><input class="form-control form-control-sm" id="cliTelefono" name="cli-telefono" autocomplete="tel" inputmode="tel" required></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliEmail">Email</label><input class="form-control form-control-sm" id="cliEmail" name="cli-email" autocomplete="email"></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliCif">CIF / DNI</label><input class="form-control form-control-sm" id="cliCif" name="cli-cif"></div>
+                    <div class="col-md-6 mb-2"><label class="form-label small" for="cliPoblacion">Población</label><input class="form-control form-control-sm" id="cliPoblacion" name="cli-poblacion" autocomplete="address-level2"></div>
+                    <div class="col-12 mb-2"><label class="form-label small" for="cliDireccion">Dirección</label><input class="form-control form-control-sm" id="cliDireccion" name="cli-direccion" autocomplete="street-address"></div>
+                    <div class="col-12 mb-2"><label class="form-label small" for="cliNotas">Notas</label><textarea class="form-control form-control-sm" id="cliNotas" name="cli-notas" rows="2"></textarea></div>
                   </div>
                   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Guardar</button>
                   <button type="button" class="btn btn-secondary btn-sm" id="btnCancelarCli">Cancelar</button>
@@ -187,11 +211,11 @@
                 <form id="formMaterial">
                   <input type="hidden" id="matId">
                   <div class="row">
-                    <div class="col-md-4 mb-2"><label class="form-label small">Código</label><input class="form-control form-control-sm" id="matCodigo"></div>
-                    <div class="col-md-8 mb-2"><label class="form-label small">Descripción *</label><input class="form-control form-control-sm" id="matDescripcion" required></div>
-                    <div class="col-md-4 mb-2"><label class="form-label small">Precio U. *</label><input type="number" step="0.01" class="form-control form-control-sm" id="matPrecio" required></div>
-                    <div class="col-md-8 mb-2"><label class="form-label small">Proveedor (opcional)</label>
-                      <select class="form-select form-select-sm" id="matProveedorId"><option value="">— Ninguno —</option></select>
+                    <div class="col-md-4 mb-2"><label class="form-label small" for="matCodigo">Código</label><input class="form-control form-control-sm" id="matCodigo" name="mat-codigo"></div>
+                    <div class="col-md-8 mb-2"><label class="form-label small" for="matDescripcion">Descripción *</label><input class="form-control form-control-sm" id="matDescripcion" name="mat-descripcion" required></div>
+                    <div class="col-md-4 mb-2"><label class="form-label small" for="matPrecio">Precio U. *</label><input type="number" step="0.01" class="form-control form-control-sm" id="matPrecio" name="mat-precio" inputmode="decimal" required></div>
+                    <div class="col-md-8 mb-2"><label class="form-label small" for="matProveedorId">Proveedor (opcional)</label>
+                      <select class="form-select form-select-sm" id="matProveedorId" name="mat-proveedor"><option value="">— Ninguno —</option></select>
                     </div>
                   </div>
                   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Guardar</button>
@@ -222,10 +246,10 @@
               <div class="card-body">
                 <form id="formProveedor">
                   <input type="hidden" id="provId">
-                  <div class="mb-3"><label class="form-label">Nombre *</label><input type="text" class="form-control" id="provNombre" required></div>
-                  <div class="mb-3"><label class="form-label">Teléfono *</label><input type="tel" class="form-control" id="provTelefono" required></div>
-                  <div class="mb-3"><label class="form-label">Productos que ofrece</label><input type="text" class="form-control" id="provProductos"></div>
-                  <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="provEmail"></div>
+                  <div class="mb-3"><label class="form-label" for="provNombre">Nombre *</label><input type="text" class="form-control" id="provNombre" name="prov-nombre" required></div>
+                  <div class="mb-3"><label class="form-label" for="provTelefono">Teléfono *</label><input type="tel" class="form-control" id="provTelefono" name="prov-telefono" autocomplete="tel" inputmode="tel" required></div>
+                  <div class="mb-3"><label class="form-label" for="provProductos">Productos que ofrece</label><input type="text" class="form-control" id="provProductos" name="prov-productos"></div>
+                  <div class="mb-3"><label class="form-label" for="provEmail">Email</label><input type="email" class="form-control" id="provEmail" name="prov-email" autocomplete="email"></div>
                   <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
                   <button type="button" id="btnCancelarProv" class="btn btn-secondary">Cancelar</button>
                 </form>
@@ -241,36 +265,31 @@
 
 </div>
 
-<!-- MODAL LOGIN (MAGIC LINK) -->
+<!-- MODAL LOGIN -->
 <div class="modal fade" id="modalLogin" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-magic"></i> Acceso técnico</h5>
+        <h5 class="modal-title"><i class="fas fa-lock"></i> Acceso técnico</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body" id="loginBodyMagic">
-        <p class="small text-muted">Introduce el email del técnico. Te enviaremos un enlace de acceso.</p>
-        <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="loginEmail" value="sertemielectrodomesticos@gmail.com"></div>
-        <button type="button" class="btn btn-primary w-100" id="btnEnviarMagic"><i class="fas fa-paper-plane"></i> Enviar enlace de acceso</button>
-        <div id="loginMsg" class="mt-3"></div>
-        <hr class="my-3">
-        <p class="text-center small mb-0">
-          <a href="#" id="linkUsarPass" class="text-muted">Usar contraseña en su lugar</a>
-        </p>
-      </div>
-      <div class="modal-body d-none" id="loginBodyPass">
-        <form id="formLoginPass">
-          <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="passEmail" value="sertemielectrodomesticos@gmail.com"></div>
-          <div class="mb-3"><label class="form-label">Contraseña</label><input type="password" class="form-control" id="passPass" required></div>
-          <button type="submit" class="btn btn-primary w-100"><i class="fas fa-sign-in-alt"></i> Entrar</button>
-          <div id="passMsg" class="mt-3"></div>
-        </form>
-        <hr class="my-3">
-        <p class="text-center small mb-0">
-          <a href="#" id="linkUsarMagic" class="text-muted">Usar enlace mágico en su lugar</a>
-        </p>
-      </div>
+      <form id="formLoginPass" autocomplete="on">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="passEmail">Email</label>
+            <input type="email" class="form-control" id="passEmail" name="email" autocomplete="username" value="sertemielectrodomesticos@gmail.com" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="passPass">Contraseña</label>
+            <input type="password" class="form-control" id="passPass" name="password" autocomplete="current-password" required>
+          </div>
+          <div id="passMsg"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -298,13 +317,29 @@
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">Nuevo material en catálogo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="mb-2"><label class="form-label small">Código</label><input class="form-control form-control-sm" id="rpCodigo"></div>
-        <div class="mb-2"><label class="form-label small">Descripción *</label><input class="form-control form-control-sm" id="rpDescripcion" required></div>
-        <div class="mb-2"><label class="form-label small">Precio U. *</label><input type="number" step="0.01" class="form-control form-control-sm" id="rpPrecio" required></div>
+        <div class="mb-2"><label class="form-label small" for="rpCodigo">Código</label><input class="form-control form-control-sm" id="rpCodigo"></div>
+        <div class="mb-2"><label class="form-label small" for="rpDescripcion">Descripción *</label><input class="form-control form-control-sm" id="rpDescripcion" required></div>
+        <div class="mb-2"><label class="form-label small" for="rpPrecio">Precio U. *</label><input type="number" step="0.01" class="form-control form-control-sm" id="rpPrecio" inputmode="decimal" required></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" id="btnGuardarMatRapido">Guardar y usar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BUSCAR CLIENTE -->
+<div class="modal fade" id="modalBuscarCliente" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-search"></i> Buscar cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control mb-2" id="inputBuscarCli" placeholder="🔍 Nombre, apellido o teléfono…" autocomplete="off">
+        <div id="resultadosBuscarCli" style="max-height: 400px; overflow-y: auto;"></div>
       </div>
     </div>
   </div>
@@ -361,55 +396,25 @@ $('btnAuth').addEventListener('click', async () => {
     if (!confirm('¿Cerrar sesión?')) return;
     await supabase.auth.signOut();
   } else {
-    $('loginBodyMagic').classList.remove('d-none');
-    $('loginBodyPass').classList.add('d-none');
-    $('loginMsg').innerHTML = '';
     $('passMsg').innerHTML = '';
     new bootstrap.Modal($('modalLogin')).show();
   }
 });
 
-$('linkUsarPass').addEventListener('click', e => {
-  e.preventDefault();
-  $('loginBodyMagic').classList.add('d-none');
-  $('loginBodyPass').classList.remove('d-none');
-});
-$('linkUsarMagic').addEventListener('click', e => {
-  e.preventDefault();
-  $('loginBodyPass').classList.add('d-none');
-  $('loginBodyMagic').classList.remove('d-none');
-});
-
-$('btnEnviarMagic').addEventListener('click', async () => {
-  const email = $('loginEmail').value.trim();
-  if (!email) { $('loginMsg').innerHTML = '<div class="alert alert-warning py-2">Introduce un email.</div>'; return; }
-  $('btnEnviarMagic').disabled = true;
-  $('loginMsg').innerHTML = '<div class="text-muted small"><i class="fas fa-spinner fa-spin"></i> Enviando…</div>';
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin + window.location.pathname,
-      shouldCreateUser: false
-    }
-  });
-  $('btnEnviarMagic').disabled = false;
-  if (error) {
-    $('loginMsg').innerHTML = `<div class="alert alert-danger py-2">${esc(error.message)}</div>`;
-  } else {
-    $('loginMsg').innerHTML = `<div class="alert alert-success py-2"><i class="fas fa-envelope"></i> Enlace enviado a <strong>${esc(email)}</strong>.<br><small>Revisa tu bandeja de entrada (y spam). Pulsa el enlace del email para entrar.</small></div>`;
-  }
-});
-
 $('formLoginPass').addEventListener('submit', async e => {
   e.preventDefault();
-  $('passMsg').innerHTML = '';
+  $('passMsg').innerHTML = '<div class="text-muted small"><i class="fas fa-spinner fa-spin"></i> Entrando…</div>';
   const { error } = await supabase.auth.signInWithPassword({
     email: $('passEmail').value.trim(),
     password: $('passPass').value
   });
-  if (error) { $('passMsg').innerHTML = `<div class="alert alert-danger py-2">${esc(error.message)}</div>`; return; }
+  if (error) {
+    $('passMsg').innerHTML = `<div class="alert alert-danger py-2 mt-2">${esc(error.message)}</div>`;
+    return;
+  }
   bootstrap.Modal.getInstance($('modalLogin')).hide();
   $('formLoginPass').reset();
+  $('passPass').value = '';
 });
 
 // ============ SOLICITUD PÚBLICA ============
@@ -470,7 +475,6 @@ async function cargarProveedores() {
   const { data } = await supabase.from('proveedores').select('*').order('nombre');
   proveedores = data || [];
   renderProveedores();
-  // Refrescar select de proveedor en catálogo
   const sel = $('matProveedorId');
   if (sel) sel.innerHTML = '<option value="">— Ninguno —</option>' + proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
 }
@@ -529,13 +533,11 @@ function renderDetalleSolicitud() {
 async function convertirEnParte() {
   const s = solicitudSel;
   if (!s) return;
-  // Buscar o crear cliente
   let clienteId = null;
   if (s.telefono) {
     const existente = clientes.find(c => c.telefono === s.telefono);
     if (existente) {
       clienteId = existente.id;
-      // Actualizar datos si faltaban
       await supabase.from('clientes').update({
         nombre: s.nombre || existente.nombre,
         apellido: s.apellido || existente.apellido,
@@ -599,12 +601,16 @@ function renderDetalleParte() {
   if (!p) { c.innerHTML = '<p class="text-muted">Selecciona un parte o crea uno nuevo.</p>'; $('btnImprimirParte').disabled = true; $('btnEliminarParte').disabled = true; return; }
   $('btnImprimirParte').disabled = false;
   $('btnEliminarParte').disabled = false;
+
+  // Datalist de clientes para autocompletar el nombre
+  const datalistCli = `<datalist id="datalistClientes">${clientes.map(cl => `<option value="${esc(((cl.nombre||'') + ' ' + (cl.apellido||'')).trim())}"></option>`).join('')}</datalist>`;
+
   c.innerHTML = `
-    <form id="formParte">
+    <form id="formParte" autocomplete="on">
       <div class="row">
         <div class="col-md-4 mb-2"><label class="form-label small">Nº parte</label><input type="text" class="form-control form-control-sm" value="${esc(p.numero||'')}" readonly></div>
-        <div class="col-md-4 mb-2"><label class="form-label small">Fecha</label><input type="date" class="form-control form-control-sm" id="pFecha" value="${p.fecha||hoyISO()}"></div>
-        <div class="col-md-4 mb-2"><label class="form-label small">Estado</label>
+        <div class="col-md-4 mb-2"><label class="form-label small" for="pFecha">Fecha</label><input type="date" class="form-control form-control-sm" id="pFecha" value="${p.fecha||hoyISO()}"></div>
+        <div class="col-md-4 mb-2"><label class="form-label small" for="pEstado">Estado</label>
           <select class="form-select form-select-sm" id="pEstado">
             ${['Pendiente','En curso','Finalizado','Facturado','Anulado'].map(e => `<option ${p.estado===e?'selected':''}>${e}</option>`).join('')}
           </select></div>
@@ -613,30 +619,29 @@ function renderDetalleParte() {
         <span>Datos del cliente</span>
         <button type="button" id="btnBuscarCli" class="btn btn-sm btn-outline-primary"><i class="fas fa-search"></i> Buscar cliente existente</button>
       </h6>
+      ${datalistCli}
       <div class="row">
-        <div class="col-md-6 mb-2"><label class="form-label small">Nombre</label><input class="form-control form-control-sm" id="pNombre" value="${esc(p.cliente_nombre||'')}"></div>
-        <div class="col-md-6 mb-2"><label class="form-label small">Apellido</label><input class="form-control form-control-sm" id="pApellido" value="${esc(p.cliente_apellido||'')}"></div>
-        <div class="col-md-6 mb-2"><label class="form-label small">Teléfono</label><input class="form-control form-control-sm" id="pTelefono" value="${esc(p.cliente_telefono||'')}"></div>
-        <div class="col-md-6 mb-2"><label class="form-label small">Email</label><input class="form-control form-control-sm" id="pEmail" value="${esc(p.cliente_email||'')}"></div>
-        <div class="col-md-8 mb-2"><label class="form-label small">Dirección</label><input class="form-control form-control-sm" id="pDireccion" value="${esc(p.cliente_direccion||'')}"></div>
-        <div class="col-md-4 mb-2"><label class="form-label small">Población</label><input class="form-control form-control-sm" id="pPoblacion" value="${esc(p.cliente_poblacion||'')}"></div>
-        <div class="col-md-6 mb-2"><label class="form-label small">CIF / DNI</label><input class="form-control form-control-sm" id="pCif" value="${esc(p.cliente_cif||'')}"></div>
-        <div class="col-md-6 mb-2"><label class="form-label small">Aparato</label><input class="form-control form-control-sm" id="pAparato" value="${esc(p.aparato||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pNombre">Nombre</label><input class="form-control form-control-sm" id="pNombre" name="parte-nombre" autocomplete="off" list="datalistClientes" value="${esc(p.cliente_nombre||'')}" placeholder="Empieza a escribir…"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pApellido">Apellido</label><input class="form-control form-control-sm" id="pApellido" name="parte-apellido" autocomplete="family-name" value="${esc(p.cliente_apellido||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pTelefono">Teléfono</label><input class="form-control form-control-sm" id="pTelefono" name="parte-telefono" autocomplete="tel" inputmode="tel" value="${esc(p.cliente_telefono||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pEmail">Email</label><input class="form-control form-control-sm" id="pEmail" name="parte-email" autocomplete="email" value="${esc(p.cliente_email||'')}"></div>
+        <div class="col-md-8 mb-2"><label class="form-label small" for="pDireccion">Dirección</label><input class="form-control form-control-sm" id="pDireccion" name="parte-direccion" autocomplete="street-address" value="${esc(p.cliente_direccion||'')}"></div>
+        <div class="col-md-4 mb-2"><label class="form-label small" for="pPoblacion">Población</label><input class="form-control form-control-sm" id="pPoblacion" name="parte-poblacion" autocomplete="address-level2" value="${esc(p.cliente_poblacion||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pCif">CIF / DNI</label><input class="form-control form-control-sm" id="pCif" name="parte-cif" value="${esc(p.cliente_cif||'')}"></div>
+        <div class="col-md-6 mb-2"><label class="form-label small" for="pAparato">Aparato</label><input class="form-control form-control-sm" id="pAparato" name="parte-aparato" value="${esc(p.aparato||'')}"></div>
       </div>
       <div class="row mt-2">
-        <div class="col-md-3 mb-2"><label class="form-label small">Garantía</label>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pGarantia">Garantía</label>
           <select class="form-select form-select-sm" id="pGarantia"><option value="false" ${!p.garantia?'selected':''}>No</option><option value="true" ${p.garantia?'selected':''}>Sí</option></select></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">F. Aviso</label><input type="date" class="form-control form-control-sm" id="pFAviso" value="${p.fecha_aviso||''}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">F. Visita</label><input type="date" class="form-control form-control-sm" id="pFVisita" value="${p.fecha_visita||''}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">Horas</label><input type="number" step="0.25" class="form-control form-control-sm" id="pHoras" value="${p.horas||''}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pFAviso">F. Aviso</label><input type="date" class="form-control form-control-sm" id="pFAviso" value="${p.fecha_aviso||''}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pFVisita">F. Visita</label><input type="date" class="form-control form-control-sm" id="pFVisita" value="${p.fecha_visita||''}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pHoras">Horas</label><input type="number" step="0.25" class="form-control form-control-sm" id="pHoras" inputmode="decimal" value="${p.horas||''}"></div>
       </div>
-      <div class="mb-2"><label class="form-label small">Observaciones</label><textarea class="form-control form-control-sm" id="pObservaciones" rows="2">${esc(p.observaciones||'')}</textarea></div>
+      <div class="mb-2"><label class="form-label small" for="pObservaciones">Observaciones</label><textarea class="form-control form-control-sm" id="pObservaciones" rows="2">${esc(p.observaciones||'')}</textarea></div>
 
       <h6 class="mt-3 text-primary d-flex justify-content-between">
         <span>Material empleado</span>
-        <div>
-          <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddLinea"><i class="fas fa-plus"></i> Añadir línea</button>
-        </div>
+        <div><button type="button" class="btn btn-sm btn-outline-primary" id="btnAddLinea"><i class="fas fa-plus"></i> Añadir línea</button></div>
       </h6>
       <div id="sinCatalogo" class="alert alert-warning py-2 small d-none">
         <i class="fas fa-info-circle"></i> No hay materiales en el catálogo. Ve a la pestaña <strong>Catálogo</strong> para añadirlos primero, o usa el botón <strong>+</strong> en cada línea para crear uno al vuelo.
@@ -658,12 +663,12 @@ function renderDetalleParte() {
 
       <h6 class="text-primary">Mano de obra y desplazamientos</h6>
       <div class="row">
-        <div class="col-md-3 mb-2"><label class="form-label small">Mano de obra</label><input type="number" step="0.01" class="form-control form-control-sm" id="pManoObra" value="${p.mano_obra||0}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">Despl. ciudad</label><input type="number" step="0.01" class="form-control form-control-sm" id="pDesplCiudad" value="${p.desplaz_ciudad||0}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">Despl. fuera</label><input type="number" step="0.01" class="form-control form-control-sm" id="pDesplFuera" value="${p.desplaz_fuera||0}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">IVA %</label><input type="number" step="0.01" class="form-control form-control-sm" id="pIva" value="${p.iva_pct||21}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">Km</label><input type="number" step="0.1" class="form-control form-control-sm" id="pKm" value="${p.km||0}"></div>
-        <div class="col-md-3 mb-2"><label class="form-label small">€/km</label><input type="number" step="0.01" class="form-control form-control-sm" id="pPrecioKm" value="${p.precio_km||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pManoObra">Mano de obra</label><input type="number" step="0.01" class="form-control form-control-sm" id="pManoObra" inputmode="decimal" value="${p.mano_obra||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pDesplCiudad">Despl. ciudad</label><input type="number" step="0.01" class="form-control form-control-sm" id="pDesplCiudad" inputmode="decimal" value="${p.desplaz_ciudad||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pDesplFuera">Despl. fuera</label><input type="number" step="0.01" class="form-control form-control-sm" id="pDesplFuera" inputmode="decimal" value="${p.desplaz_fuera||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pIva">IVA %</label><input type="number" step="0.01" class="form-control form-control-sm" id="pIva" inputmode="decimal" value="${p.iva_pct||21}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pKm">Km</label><input type="number" step="0.1" class="form-control form-control-sm" id="pKm" inputmode="decimal" value="${p.km||0}"></div>
+        <div class="col-md-3 mb-2"><label class="form-label small" for="pPrecioKm">€/km</label><input type="number" step="0.01" class="form-control form-control-sm" id="pPrecioKm" inputmode="decimal" value="${p.precio_km||0}"></div>
       </div>
 
       <div class="totales-box mt-3" id="totalesBox"></div>
@@ -685,17 +690,30 @@ function renderDetalleParte() {
   $('btnPedirRepuestos').addEventListener('click', pedirRepuestos);
   $('btnBuscarCli').addEventListener('click', abrirBuscarCliente);
   ['pManoObra','pDesplCiudad','pDesplFuera','pKm','pPrecioKm','pIva'].forEach(id => $(id).addEventListener('input', recalcularTotales));
+
+  // Autocompletado: al cambiar el nombre, buscar cliente por nombre completo y rellenar
+  $('pNombre').addEventListener('change', e => {
+    const val = e.target.value.trim().toLowerCase();
+    if (!val) return;
+    const match = clientes.find(c => `${(c.nombre||'')} ${(c.apellido||'')}`.trim().toLowerCase() === val);
+    if (match) {
+      $('pApellido').value = match.apellido||'';
+      $('pTelefono').value = match.telefono||'';
+      $('pEmail').value = match.email||'';
+      $('pCif').value = match.cif||'';
+      $('pDireccion').value = match.direccion||'';
+      $('pPoblacion').value = match.poblacion||'';
+    }
+  });
 }
 
 function renderLineasMaterial() {
   const tbody = $('tbodyMaterial');
-  const optsCatalogo = catalogo.map(m => `<option value="${m.id}">${esc((m.codigo?m.codigo+' · ':'') + m.descripcion)} — ${eur(m.precio_unitario)}</option>`).join('');
   tbody.innerHTML = lineasMaterial.map((l, i) => {
-    // Buscar el id del catálogo que corresponde a esta línea (por código+descripcion)
     const catItem = catalogo.find(m => m.descripcion === l.descripcion && (m.codigo||'') === (l.codigo||''));
     const matId = catItem?.id || '';
     return `<tr class="material-row" data-i="${i}">
-      <td><input type="number" step="0.01" class="form-control form-control-sm cant" value="${l.cantidad}"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm cant" inputmode="decimal" value="${l.cantidad}"></td>
       <td><input type="text" class="form-control form-control-sm mat-readonly" value="${esc(l.codigo)}" readonly></td>
       <td>
         ${catalogo.length
@@ -770,7 +788,6 @@ function recalcularTotales() {
 async function guardarParte(e) {
   e.preventDefault();
   if (!parteSel) return;
-  // Buscar/crear cliente por teléfono
   let clienteId = parteSel.cliente_id || null;
   const tel = $('pTelefono').value.trim();
   if (tel) {
@@ -843,23 +860,46 @@ $('btnGuardarMatRapido').addEventListener('click', async () => {
   materialRapidoParaLinea = null;
 });
 
-// Buscar cliente existente
+// ============ BUSCAR CLIENTE (MODAL) ============
 function abrirBuscarCliente() {
-  if (!clientes.length) { alert('No hay clientes guardados todavía.'); return; }
-  const opts = clientes.map((c,i) => `${i+1}. ${c.nombre} ${c.apellido||''} — ${c.telefono||''}`).join('\n');
-  const r = prompt(`Clientes guardados:\n\n${opts}\n\nEscribe el número del cliente:`);
-  if (!r) return;
-  const c = clientes[+r - 1];
-  if (!c) return;
-  $('pNombre').value = c.nombre || '';
-  $('pApellido').value = c.apellido || '';
-  $('pTelefono').value = c.telefono || '';
-  $('pEmail').value = c.email || '';
-  $('pCif').value = c.cif || '';
-  $('pDireccion').value = c.direccion || '';
-  $('pPoblacion').value = c.poblacion || '';
+  $('inputBuscarCli').value = '';
+  renderBuscarCliente('');
+  new bootstrap.Modal($('modalBuscarCliente')).show();
+  setTimeout(() => $('inputBuscarCli').focus(), 300);
 }
 
+function renderBuscarCliente(filtro) {
+  filtro = String(filtro || '').toLowerCase().trim();
+  const filtrados = clientes.filter(c => !filtro
+    || `${(c.nombre||'')} ${(c.apellido||'')}`.toLowerCase().includes(filtro)
+    || (c.telefono||'').includes(filtro));
+  const cont = $('resultadosBuscarCli');
+  if (!filtrados.length) { cont.innerHTML = '<p class="text-muted text-center py-3">Sin resultados.</p>'; return; }
+  cont.innerHTML = '<ul class="list-group">' + filtrados.map(c => `
+    <li class="list-group-item cliente-buscar-item" data-id="${c.id}">
+      <div class="d-flex justify-content-between">
+        <strong>${esc(c.nombre||'')} ${esc(c.apellido||'')}</strong>
+        <small class="text-muted">${esc(c.telefono||'')}</small>
+      </div>
+      ${c.direccion ? `<small class="text-muted">${esc(c.direccion)}${c.poblacion ? ' · '+esc(c.poblacion) : ''}</small>` : ''}
+    </li>`).join('') + '</ul>';
+  cont.querySelectorAll('.cliente-buscar-item').forEach(li => li.addEventListener('click', () => {
+    const c = clientes.find(x => x.id === li.dataset.id);
+    if (!c) return;
+    $('pNombre').value = c.nombre||'';
+    $('pApellido').value = c.apellido||'';
+    $('pTelefono').value = c.telefono||'';
+    $('pEmail').value = c.email||'';
+    $('pCif').value = c.cif||'';
+    $('pDireccion').value = c.direccion||'';
+    $('pPoblacion').value = c.poblacion||'';
+    bootstrap.Modal.getInstance($('modalBuscarCliente')).hide();
+  }));
+}
+
+$('inputBuscarCli').addEventListener('input', e => renderBuscarCliente(e.target.value));
+
+// ============ NUEVO PARTE / ELIMINAR ============
 $('btnNuevoParte').addEventListener('click', async () => {
   const { data, error } = await supabase.from('partes').insert({ fecha: hoyISO(), estado: 'Pendiente', iva_pct: 21, created_by: session.user.id }).select().single();
   if (error) { alert('Error: ' + error.message); return; }
