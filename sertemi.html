@@ -26,9 +26,15 @@
   .totales-box .total-final { font-size: 1.3rem; font-weight: bold; color: #1e3a8a; }
   .loading { text-align: center; padding: 20px; color: #888; }
   .mat-readonly { background-color: #f0f0f0 !important; }
-  /* ---- LOGO ---- */
-  .logo-pill { background:#fff; border-radius:10px; padding:10px 18px; display:inline-flex; align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
-  .logo-pill img { height:70px; display:block; }
+  
+  /* ---- MAGIA PARA EL LOGO ---- */
+  .logo-pill { display:inline-flex; align-items:center; }
+  .logo-pill img { 
+    height:110px; 
+    display:block; 
+    mix-blend-mode: multiply; /* Elimina el fondo blanco automáticamente */
+    transform: scale(1.15); /* Hace el logo un pelín más grande sin ocupar más espacio */
+  }
 </style>
 </head>
 <body>
@@ -36,14 +42,16 @@
 <div class="container">
 
   <!-- ============ CABECERA con LOGO ============ -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0 d-flex align-items-center gap-3">
+  <div class="d-flex align-items-center mb-4">
+    <!-- margin-left:22% empuja todo un poco más a la derecha -->
+    <h1 class="mb-0 d-flex align-items-center gap-2" style="margin-left:22%;">
       <span class="logo-pill">
+        <!-- Asegúrate de que el nombre coincide con tu archivo -->
         <img src="logo-sertemi.png" alt="Sertemi">
       </span>
-      <span>Partes</span>
+      <span class="ms-3">Partes</span>
     </h1>
-    <div>
+    <div class="ms-auto">
       <span id="estadoSesion" class="badge bg-secondary me-2">Sin sesión</span>
       <button id="btnAuth" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-lock"></i> Acceso técnico
@@ -129,8 +137,6 @@
     </ul>
 
     <div class="tab-content">
-
-      <!-- SOLICITUDES -->
       <div class="tab-pane fade show active" id="tabSolicitudes">
         <div class="row">
           <div class="col-md-5"><div class="card"><div class="card-header">Solicitudes pendientes</div><div class="card-body"><div id="listaSolicitudes"><div class="loading">Cargando…</div></div></div></div></div>
@@ -138,7 +144,6 @@
         </div>
       </div>
 
-      <!-- PARTES -->
       <div class="tab-pane fade" id="tabPartes">
         <div class="row">
           <div class="col-md-5">
@@ -165,7 +170,6 @@
         </div>
       </div>
 
-      <!-- CLIENTES -->
       <div class="tab-pane fade" id="tabClientes">
         <div class="row">
           <div class="col-md-5">
@@ -206,7 +210,6 @@
         </div>
       </div>
 
-      <!-- CATÁLOGO -->
       <div class="tab-pane fade" id="tabCatalogo">
         <div class="row">
           <div class="col-md-5">
@@ -245,7 +248,6 @@
         </div>
       </div>
 
-      <!-- PROVEEDORES -->
       <div class="tab-pane fade" id="tabProveedores">
         <div class="row">
           <div class="col-md-6">
@@ -276,10 +278,8 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
-
 </div>
 
 <!-- MODAL LOGIN -->
@@ -369,18 +369,14 @@ const SUPABASE_URL = 'https://abwcjcohomifcilquknf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_5M0b1VwXkV9nyJDUbnmDew_YLTFIlSw';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ============ LOGO ============
-// Ruta absoluta para que también funcione en la ventana de impresión (about:blank)
 const LOGO_URL = new URL('logo-sertemi.png', window.location.href).href;
 
-// ============ ESTADO ============
 let session = null;
 let solicitudes = [], partes = [], proveedores = [], clientes = [], catalogo = [];
 let solicitudSel = null, parteSel = null;
 let lineasMaterial = [];
 let materialRapidoParaLinea = null;
 
-// ============ HELPERS ============
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const eur = n => (Number(n)||0).toFixed(2).replace('.',',') + ' €';
@@ -394,7 +390,6 @@ function esParteNuevo(p) {
     && p.estado === 'Pendiente';
 }
 
-// ============ AUTH ============
 supabase.auth.onAuthStateChange((_e, s) => actualizarUI(s));
 const { data: { session: s0 } } = await supabase.auth.getSession();
 actualizarUI(s0);
@@ -444,7 +439,6 @@ $('formLoginPass').addEventListener('submit', async e => {
   $('passPass').value = '';
 });
 
-// ============ SOLICITUD PÚBLICA ============
 $('formSolicitud').addEventListener('submit', async e => {
   e.preventDefault();
   const p = {
@@ -484,7 +478,6 @@ $('btnProcesarImport').addEventListener('click', () => {
   $('textoWhatsApp').value = '';
 });
 
-// ============ CARGA DATOS ============
 async function cargarTodo() {
   await Promise.all([cargarSolicitudes(), cargarPartes(), cargarProveedores(), cargarClientes(), cargarCatalogo()]);
 }
@@ -521,7 +514,6 @@ async function cargarCatalogo() {
   renderCatalogo();
 }
 
-// ============ SOLICITUDES ============
 function renderSolicitudes() {
   $('badgeSolicitudes').textContent = solicitudes.length;
   const c = $('listaSolicitudes');
@@ -603,7 +595,6 @@ async function convertirEnParte() {
   seleccionarParte(data.id);
 }
 
-// ============ PARTES ============
 function renderPartes() {
   const c = $('listaPartes');
   if (!partes.length) {
@@ -971,7 +962,6 @@ function pedirRepuestos() {
   window.open(`https://wa.me/${String(prov.telefono).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// ============ CLIENTES ============
 function renderClientes() {
   const filtro = ($('buscarCliente')?.value || '').toLowerCase();
   const filtrados = clientes.filter(c => !filtro || (c.nombre+' '+(c.apellido||'')).toLowerCase().includes(filtro) || (c.telefono||'').includes(filtro));
@@ -1011,7 +1001,6 @@ $('formCliente').addEventListener('submit', async e => {
 $('btnNuevoCliente').addEventListener('click', () => { $('formCliente').reset(); $('cliId').value = ''; $('msgCliente').innerHTML = ''; $('cliNombre').focus(); });
 $('btnCancelarCli').addEventListener('click', () => { $('formCliente').reset(); $('cliId').value = ''; $('msgCliente').innerHTML = ''; });
 
-// ============ CATÁLOGO ============
 function renderCatalogo() {
   const filtro = ($('buscarMaterial')?.value || '').toLowerCase();
   const filtrados = catalogo.filter(m => !filtro || (m.descripcion||'').toLowerCase().includes(filtro) || (m.codigo||'').toLowerCase().includes(filtro));
@@ -1054,7 +1043,6 @@ $('formMaterial').addEventListener('submit', async e => {
 $('btnNuevoMaterial').addEventListener('click', () => { $('formMaterial').reset(); $('matId').value = ''; $('msgMaterial').innerHTML = ''; $('matDescripcion').focus(); });
 $('btnCancelarMat').addEventListener('click', () => { $('formMaterial').reset(); $('matId').value = ''; $('msgMaterial').innerHTML = ''; });
 
-// ============ PROVEEDORES ============
 function renderProveedores() {
   const c = $('listaProveedores');
   if (!proveedores.length) { c.innerHTML = '<p class="text-muted">No hay proveedores.</p>'; return; }
@@ -1145,8 +1133,8 @@ function generarHTMLParte(p, lineas) {
 *{box-sizing:border-box;margin:0;padding:0}html,body{font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;color:#000}
 @page{size:A4;margin:8mm}body{padding:0}.hoja{width:194mm;padding:4mm}
 .cabecera{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1e3a8a;padding-bottom:2mm;margin-bottom:2mm}
-.logo-caja{height:24mm;width:68mm;display:flex;align-items:center;justify-content:flex-start}
-.logo-caja img{max-height:100%;max-width:100%;object-fit:contain}
+.logo-caja{height:26mm;width:74mm;display:flex;align-items:center;justify-content:flex-start}
+.logo-caja img{max-height:100%;max-width:100%;object-fit:contain;mix-blend-mode:multiply;}
 .empresa{text-align:right;font-size:8pt;line-height:1.3}
 .empresa strong{font-size:10pt;color:#1e3a8a}
 .banda{display:flex;border:1px solid #000;margin-bottom:2mm}
@@ -1236,7 +1224,6 @@ table.totales tr.total td{background:#1e3a8a;color:#fff;font-weight:bold;font-si
 </body></html>`;
 }
 
-// ============ AUTO-REFRESCO ============
 setInterval(() => {
   if (session && !document.hidden) {
     cargarPartes();
